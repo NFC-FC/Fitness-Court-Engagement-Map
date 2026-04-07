@@ -259,6 +259,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; over
     <div class="chart-card"><div class="chart-title">Top Locations</div><canvas id="chart-courts" height="180"></canvas></div>
     <div class="chart-card"><div class="chart-title">Scans by State</div><canvas id="chart-states" height="180"></canvas></div>
     <div class="chart-card"><div class="chart-title">Weekly Totals</div><canvas id="chart-weekly" height="180"></canvas></div>
+    <div class="chart-card"><div class="chart-title">New vs Recurring App Users <span class="chart-subtitle">app check-ins · snapshot Mar 31, 2026</span></div><canvas id="chart-retention" height="180"></canvas></div>
   </div>
 </div>
 
@@ -1011,6 +1012,36 @@ function renderAnalytics() {
     options: { responsive:true, plugins:{ legend:{display:false} },
       scales:{ x:{ grid:{display:false}, ticks:{maxRotation:45, font:{size:9}} },
                y:{ grid:{color:'#f1f5f9'}, ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+
+  // 6 — New vs Recurring App Users (static snapshot from app user export Mar 31, 2026)
+  // Recurring = 2+ check-ins, First-time = 1 check-in, Inactive = 0 check-ins (56 total registered)
+  activeCharts.retention = new Chart(document.getElementById('chart-retention'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Recurring (2+ visits)', 'First-time (1 visit)', 'Registered, not yet active'],
+      datasets: [{ data: [6, 27, 23],
+        backgroundColor: [teal, 'rgba(8,145,178,0.35)', '#e2e8f0'],
+        borderWidth: 2, borderColor: 'white', hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 10, family: "'Inter',sans-serif" }, padding: 10, boxWidth: 12, color: '#475569' }
+        },
+        tooltip: {
+          backgroundColor: 'white', titleColor: '#334155', bodyColor: '#0891b2',
+          borderColor: '#e2e8f0', borderWidth: 1, padding: 10,
+          callbacks: {
+            label: item => ` ${item.raw} users (${Math.round(item.raw / 56 * 100)}%)`
+          },
+          displayColors: false
+        }
+      }
+    }
   });
 }
 
