@@ -514,15 +514,28 @@ function refreshFromSheet() { loadFromSheet(true); }
 
 async function loadDailyFromSupabase() {
   try {
-    const resp = await fetch(
-      SUPABASE_URL + '/rest/v1/scan_logs?select=qr_id,scan_date&limit=50000',
-      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
-    );
-    if (!resp.ok) { console.warn('Supabase fetch failed:', resp.status); return; }
-    const rows = await resp.json();
+    // Paginate to get all rows (Supabase caps each request at 1000)
+    const PAGE = 1000;
+    let allRows = [], from = 0;
+    while (true) {
+      const resp = await fetch(
+        SUPABASE_URL + '/rest/v1/scan_logs?select=qr_id,scan_date&order=id.asc',
+        { headers: {
+            'apikey': SUPABASE_ANON,
+            'Authorization': 'Bearer ' + SUPABASE_ANON,
+            'Range': `${from}-${from + PAGE - 1}`,
+            'Range-Unit': 'items'
+        } }
+      );
+      if (!resp.ok) { console.warn('Supabase fetch failed:', resp.status); break; }
+      const rows = await resp.json();
+      allRows = allRows.concat(rows);
+      if (rows.length < PAGE) break;
+      from += PAGE;
+    }
 
     const dailyMap = {};
-    rows.forEach(row => {
+    allRows.forEach(row => {
       const id   = String(row.qr_id);
       const date = String(row.scan_date).slice(0, 10);
       if (!dailyMap[id]) dailyMap[id] = {};
@@ -535,7 +548,7 @@ async function loadDailyFromSupabase() {
     }));
 
     renderMarkers();
-    console.log('Supabase daily loaded:', rows.length, 'scan events');
+    console.log('Supabase daily loaded:', allRows.length, 'total scan events');
   } catch(e) {
     console.error('Supabase daily load error:', e);
   }
