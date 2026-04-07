@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fitness Court Engagement Map | NFC</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+#header {
+  background: #0891b2; color: white;
+  padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
+  position: relative; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#header h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+#header .sub { font-size: 0.7rem; opacity: 0.75; margin-top: 2px; font-weight: 400; letter-spacing: 0.01em; }
+
+#stats-bar {
+  display: flex; background: rgba(255,255,255,0.97);
+  border-bottom: 1px solid #e2e8f0; position: relative; z-index: 999;
+}
+.stat { flex: 1; padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; }
+.stat:last-child { border-right: none; }
+.stat .val { font-size: 1.25rem; font-weight: 700; color: #0891b2; line-height: 1; letter-spacing: -0.02em; }
+.stat .lbl { font-size: 0.62rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; font-weight: 500; }
+
+#controls {
+  background: rgba(255,255,255,0.97); padding: 8px 16px;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid #e2e8f0; flex-wrap: wrap;
+  position: relative; z-index: 999;
+}
+.btn-group { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0; }
+.btn-group button {
+  padding: 5px 11px; border: none; border-right: 1px solid #e2e8f0;
+  background: white; font-size: 0.72rem; font-weight: 500; cursor: pointer; color: #64748b;
+  font-family: 'Inter', sans-serif; transition: background 0.15s;
+}
+.btn-group button:last-child { border-right: none; }
+.btn-group button.active { background: #0891b2; color: white; font-weight: 600; }
+.btn-group button:hover:not(.active) { background: #f8fafc; }
+
+#custom-range { display: none; align-items: center; gap: 6px; font-size: 0.72rem; color: #64748b; font-weight: 500; }
+#custom-range input { border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 6px; font-size: 0.72rem; font-family: 'Inter', sans-serif; }
+#custom-apply { background: #0891b2; color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 0.72rem; cursor: pointer; font-weight: 600; font-family: 'Inter', sans-serif; }
+.controls-label { font-size: 0.62rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+
+
+#page-body { display: flex; height: calc(100vh - 132px); overflow: hidden; }
+#map { width: 100%; height: 100%; }
+#sidebar { overflow: visible; }
+
+.map-legend {
+  background: rgba(255,255,255,0.96); border-radius: 8px; padding: 10px 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12); font-size: 0.72rem; backdrop-filter: blur(6px);
+  font-family: 'Inter', sans-serif;
+}
+.map-legend.dark { background: rgba(25,32,45,0.94); color: #cbd5e1; }
+.map-legend h4 { margin-bottom: 6px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; color: #475569; }
+.map-legend.dark h4 { color: #94a3b8; }
+.legend-row { display: flex; align-items: center; gap: 7px; margin: 3px 0; font-size: 0.7rem; color: #64748b; }
+.map-legend.dark .legend-row { color: #94a3b8; }
+.legend-dot { border-radius: 50%; border: 1px solid rgba(0,0,0,0.12); display: inline-block; flex-shrink: 0; }
+
+.heat-label {
+  background: rgba(15,23,42,0.7); color: white; border: none;
+  font-size: 0.62rem; font-weight: 600; padding: 2px 6px; letter-spacing: 0.02em;
+  border-radius: 4px; white-space: nowrap; box-shadow: none; font-family: 'Inter', sans-serif;
+}
+.heat-label::before { display: none; }
+.court-popup { min-width: 210px; font-family: 'Inter', sans-serif; }
+.court-popup h3 { font-size: 0.85rem; font-weight: 600; color: #0f172a; margin-bottom: 2px; line-height: 1.4; letter-spacing: -0.01em; }
+.court-popup .city { font-size: 0.72rem; color: #64748b; margin-bottom: 4px; font-weight: 500; }
+.court-popup .address { font-size: 0.68rem; color: #94a3b8; margin-bottom: 8px; }
+.court-popup .scan-count { font-size: 1.5rem; font-weight: 700; color: #0891b2; line-height: 1; letter-spacing: -0.03em; }
+.court-popup .scan-lbl { font-size: 0.62rem; color: #94a3b8; margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+.court-popup .coord-source { font-size: 0.62rem; font-weight: 500; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-top: 6px; }
+.coord-sf { background: #e0f7fa; color: #0771a0; }
+.coord-geo { background: #fef9c3; color: #92400e; }
+.court-popup .qr-link { display: block; margin-top: 6px; font-size: 0.7rem; color: #0891b2; text-decoration: none; font-weight: 500; }
+.court-popup .qr-link:hover { text-decoration: underline; }
+
+#sidebar {
+  width: 300px; min-width: 300px; height: 100%;
+  background: #f1f5f9; z-index: 500;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+  display: flex; flex-direction: column;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: margin-left 0.3s ease;
+  overflow: hidden;
+}
+#sidebar.collapsed { margin-left: -300px; }
+#sidebar-toggle { display: none; }
+#sidebar-tab {
+  width: 18px; flex-shrink: 0;
+  background: #0891b2; color: white;
+  cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 1.3rem; font-weight: bold;
+  user-select: none; z-index: 600;
+  transition: background 0.15s;
+}
+#sidebar-tab:hover { background: #0771a0; }
+#sidebar-header {
+  background: white; color: #0f172a; padding: 15px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+}
+#sidebar-header h2 { font-size: 0.9rem; font-weight: 700; color: #0891b2; letter-spacing: -0.01em; }
+#sidebar-close { background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; line-height: 1; }
+#sidebar-close:hover { color: #475569; }
+#sidebar-body { flex: 1; overflow-y: auto; padding: 0; }
+.sidebar-section { padding: 14px 18px; border-bottom: 1px solid #e2e8f0; background: white; }
+#top3-section { background: #f0f9ff; }
+.sidebar-section-title { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; margin-bottom: 10px; font-weight: 600; }
+#top3-section .sidebar-section-title { color: #0891b2; }
+.top3-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.top3-rank { width: 26px; height: 26px; border-radius: 50%; background: #0891b2; color: white; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.top3-rank.rank2 { background: #38b2cc; }
+.top3-rank.rank3 { background: #7dd3e8; }
+.top3-info { flex: 1; min-width: 0; }
+.top3-name { font-size: 0.8rem; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
+.top3-city { font-size: 0.67rem; color: #64748b; font-weight: 400; margin-top: 1px; }
+.top3-scans { font-size: 0.95rem; font-weight: 700; color: #0891b2; letter-spacing: -0.02em; }
+.city-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+.city-item:last-child { border-bottom: none; }
+.city-drillable { cursor: pointer; border-radius: 4px; padding-left: 4px; margin-left: -4px; }
+.city-drillable:hover { background: #f8fafc; }
+.city-left { flex: 1; min-width: 0; }
+.city-name { font-size: 0.8rem; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; }
+.city-state { font-size: 0.67rem; color: #64748b; font-weight: 400; }
+.city-scans { font-size: 0.85rem; font-weight: 700; color: #334155; flex-shrink: 0; letter-spacing: -0.01em; }
+.city-bar { height: 3px; background: #e2e8f0; border-radius: 2px; margin-top: 3px; }
+.city-bar-fill { height: 100%; background: #0891b2; border-radius: 2px; transition: width 0.3s; }
+.drill-list { background: #f8fafc; padding: 4px 12px 8px 28px; border-bottom: 1px solid #e2e8f0; }
+.drill-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+.drill-item:last-child { border-bottom: none; }
+.drill-name { font-size: 0.75rem; color: #475569; flex: 1; min-width: 0; font-weight: 400; }
+.drill-scans { font-size: 0.75rem; font-weight: 600; color: #334155; flex-shrink: 0; }
+#sidebar-overlay { display: none; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <div class="sub">National Fitness Campaign</div>
+    <h1>Fitness Court Engagement Map</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="font-size:0.68rem;opacity:0.75;font-family:'Inter',sans-serif;font-weight:400;letter-spacing:0.01em;">April 3, 2026</div>
+    <button id="refresh-btn" onclick="refreshFromSheet()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.45);color:white;border-radius:6px;padding:5px 14px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:0.01em;">&#8635; Refresh Scans</button>
+    <button onclick="openSourceModal()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);color:white;border-radius:50%;width:22px;height:22px;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;" title="Data source info">&#9432;</button>
+  </div>
+</div>
+
+<div id="stats-bar">
+  <div class="stat"><div class="val" id="s-courts">46</div><div class="lbl">Fitness Courts</div></div>
+  <div class="stat"><div class="val" id="s-active">38</div><div class="lbl">With Scans</div></div>
+  <div class="stat"><div class="val" id="s-total">2,003</div><div class="lbl">Total Scans</div></div>
+  <div class="stat"><div class="val" id="s-visible">46</div><div class="lbl">Visible</div></div>
+</div>
+
+<div id="controls">
+  <div>
+    <div class="controls-label" style="margin-bottom:3px;">Search City</div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input type="text" id="city-search" placeholder="City name..."
+        style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:0.72rem;font-family:'Inter',sans-serif;width:160px;outline:none;color:#0f172a;"
+        onkeydown="if(event.key==='Enter')searchCity()">
+      <button onclick="searchCity()" style="background:#0891b2;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Go</button>
+      <button onclick="clearSearch()" id="clear-search-btn" style="display:none;background:#f1f5f9;color:#64748b;border:none;border-radius:6px;padding:5px 8px;font-size:0.72rem;cursor:pointer;font-family:'Inter',sans-serif;">&#x2715;</button>
+    </div>
+  </div>
+  <div>
+    <div class="controls-label" style="margin-bottom:3px;">Visualization</div>
+    <select id="viz-select" onchange="setViz(this.value)" style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:0.72rem;font-family:'Inter',sans-serif;color:#334155;background:white;cursor:pointer;">
+      <option value="bubble">Bubble Map</option>
+      <option value="heat">Heatmap</option>
+    </select>
+  </div>
+  <div>
+    <div class="controls-label" style="margin-bottom:3px;">Basemap</div>
+    <select id="basemap-select" onchange="setBasemapFromSelect(this.value)" style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:0.72rem;font-family:'Inter',sans-serif;color:#334155;background:white;cursor:pointer;">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+      <option value="aerial">Aerial</option>
+    </select>
+  </div>
+  <div>
+    <div class="controls-label" style="margin-bottom:3px;">Date Range</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <select id="date-select" onchange="setDateRangeFromSelect(this.value)" style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:0.72rem;font-family:'Inter',sans-serif;color:#334155;background:white;cursor:pointer;">
+        <option value="all">All Time</option>
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="7days">Last 7 Days</option>
+        <option value="30days">Last 30 Days</option>
+        <option value="year">This Year</option>
+        <option value="custom">Custom Range</option>
+      </select>
+      <div id="custom-range">
+        <input type="date" id="date-from" value="2026-01-01" min="2025-10-03" max="2026-04-01">
+        <span>to</span>
+        <input type="date" id="date-to" value="2026-04-01" min="2025-10-03" max="2026-04-01">
+        <button id="custom-apply" onclick="applyCustomRange()">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-body">
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h2>Rankings</h2>
+    <button id="sidebar-close" onclick="toggleSidebar()">&#x2715;</button>
+  </div>
+  <div id="sidebar-body">
+    <div class="sidebar-section" id="top3-section">
+      <div class="sidebar-section-title">Top 3 Fitness Courts</div>
+      <div id="top3-list"></div>
+    </div>
+    <div class="sidebar-section" style="flex:1;">
+      <div class="sidebar-section-title">All Fitness Courts by City</div>
+      <div id="city-list"></div>
+    </div>
+  </div>
+</div>
+<div id="sidebar-tab" onclick="toggleSidebar()" title="Toggle Rankings">
+  <span id="sidebar-tab-arrow">&#8249;</span>
+</div>
+<div style="position:relative;flex:1;height:100%;">
+<div id="map"></div>
+
+<script>
+const COURTS = [{"id": 9813864, "name": "QR-CA-DublinUSD-YorkAlternativeLearningCenter", "city": "Dublin U", "state": "CA", "location": "York Alternative Learning Center", "lat": 37.71069, "lon": -121.91906, "address": "", "url": "https://qrcodes.pro/VSEX75", "tags": [], "scans_all": 63, "scans_today": 0, "scans_week": 4, "scans_month": 0, "scans_year": 61, "daily": {"2025-10-16": 1, "2026-03-02": 2, "2026-03-03": 1, "2026-03-06": 3, "2026-03-07": 8, "2026-03-08": 7, "2026-03-09": 5, "2026-03-10": 2, "2026-03-11": 2, "2026-03-12": 1, "2026-03-13": 1, "2026-03-14": 3, "2026-03-15": 2, "2026-03-16": 2, "2026-03-17": 3, "2026-03-18": 1, "2026-03-19": 3, "2026-03-20": 1, "2026-03-21": 1, "2026-03-22": 2, "2026-03-24": 1, "2026-03-27": 2, "2026-03-28": 3, "2026-03-29": 1, "2026-03-30": 4}, "source": "Salesforce \u2713"}, {"id": 11114265, "name": "QR-SC-Sumter-USCSumter", "city": "Sumter", "state": "SC", "location": "USCSumter", "lat": 33.920435, "lon": -80.341469, "address": "", "url": "https://qrcodes.pro/be4fWR", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 11114269, "name": "QR-IL-VillageOfGlenwood-GeorgeArquillaPark", "city": "Village Of Glenwood", "state": "IL", "location": "George Arquilla Park", "lat": 41.542487, "lon": -87.602277, "address": "", "url": "https://qrcodes.pro/OB85g6", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 11114280, "name": "QR-PA-CharlestownTownship-CharlestownTownshipPark", "city": "Charlestown Township", "state": "PA", "location": "Charlestown Township Park", "lat": 40.085901, "lon": -75.546086, "address": "", "url": "https://qrcodes.pro/e71BX3", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 11114292, "name": "QR-TX-CityOfLowryCrossing-CityPark", "city": "City Of Lowry Crossing", "state": "TX", "location": "City Park", "lat": 33.1343, "lon": -96.6299, "address": "", "url": "https://qrcodes.pro/dfhUy9", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 11102180, "name": "QR-NV-LasVegas-PoliceMemorialPark", "city": "Las Vegas", "state": "NV", "location": "Police Memorial Park", "lat": 36.22001, "lon": -115.3107, "address": "3250 Metro Academy Way, Las Vegas, NV 89129", "url": "https://qrcodes.pro/QtcHXb", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 11102176, "name": "QR-NV-Henderson-CornerstonePark", "city": "Henderson", "state": "NV", "location": "Cornerstone Park", "lat": 36.03805, "lon": -115.05437, "address": "", "url": "https://qrcodes.pro/EO4QkR", "tags": [], "scans_all": 2, "scans_today": 0, "scans_week": 4, "scans_month": 0, "scans_year": 4, "daily": {"2026-03-31": 4}, "source": "Salesforce \u2713"}, {"id": 11101162, "name": "QR-NV-LasVegas-BillBriarePark", "city": "Las Vegas", "state": "NV", "location": "Bill Briare Park", "lat": 36.17884, "lon": -115.24994, "address": "", "url": "https://qrcodes.pro/AbLBwU", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 11102199, "name": "QR-NV-LasVegas-WoofterFamilyPark", "city": "Las Vegas", "state": "NV", "location": "Woofter Family Park", "lat": 36.18943, "lon": -115.24784, "address": "", "url": "https://qrcodes.pro/yk8A22", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 11102213, "name": "QR-NV-LasVegas-VonTobelCommunityCenter", "city": "Las Vegas", "state": "NV", "location": "Von Tobel Community Center", "lat": 36.2039, "lon": -115.09544, "address": "", "url": "https://qrcodes.pro/pQCzyM", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 11101128, "name": "QR-NV-LasVegas-GarehimeHeightsPark", "city": "Las Vegas", "state": "NV", "location": "Garehime Heights Park", "lat": 36.23141, "lon": -115.29375, "address": "", "url": "https://qrcodes.pro/ec7PWV", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 10909632, "name": "QR-TX-McAllen-BillSchuppPark", "city": "Mc Allen", "state": "TX", "location": "Bill Schupp Park", "lat": 26.2034, "lon": -98.23, "address": "", "url": "https://qrcodes.pro/L6fRv8", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-19": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 10837654, "name": "QR-WA-Yelm-YelmCityPark", "city": "Yelm", "state": "WA", "location": "Yelm City Park", "lat": 46.93978, "lon": -122.60793, "address": "115 SE Mosman Avenue, Yelm, WA 98597", "url": "https://qrcodes.pro/hKmamn", "tags": [], "scans_all": 6, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 6, "daily": {"2026-03-06": 1, "2026-03-09": 1, "2026-03-17": 2, "2026-03-20": 2}, "source": "Salesforce \u2713"}, {"id": 10783851, "name": "QR-TX-CityofGoliad-WOakSt&NChiltonAve", "city": "Cityof Goliad", "state": "TX", "location": "WOak St&NChilton Ave", "lat": 28.646778, "lon": -97.437955, "address": "", "url": "https://qrcodes.pro/J9nTw7", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-06": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 10777642, "name": "QR-PA-UrisnusCollege-UrisnusCollege", "city": "Urisnus College", "state": "PA", "location": "Urisnus College", "lat": 40.1773, "lon": -75.454, "address": "", "url": "https://qrcodes.pro/kJteEM", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-09": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 10777635, "name": "QR-IL-Fulton-2ndSt&9thAve", "city": "Fulton", "state": "IL", "location": "2 nd St& 9 th Ave", "lat": 40.47143, "lon": -90.184556, "address": "", "url": "https://qrcodes.pro/061lTI", "tags": [], "scans_all": 3, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 3, "daily": {"2026-03-06": 2, "2026-03-09": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 10669270, "name": "QR-OK-ShawneePublicSchools-ShawneeHighSchool", "city": "Shawnee Public Schools", "state": "OK", "location": "Shawnee High School", "lat": 35.3273, "lon": -96.9253, "address": "", "url": "https://qrcodes.pro/mCimIz", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 1, "daily": {"2026-02-17": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 10554578, "name": "QR-TX-FarmersBranch-FarmersBranchPoliceDepartment", "city": "Farmers Branch", "state": "TX", "location": "Farmers Branch Police Department", "lat": 32.92523, "lon": -96.85528, "address": "3723 Valley View Ln, Farmers Branch, TX 75244", "url": "https://qrcodes.pro/bEJqLz", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 1, "daily": {"2026-02-10": 1}, "source": "Salesforce \u2713"}, {"id": 10449439, "name": "QR-FL-SantaRosaCounty-OptimistPark", "city": "Santa Rosa County", "state": "FL", "location": "Optimist Park", "lat": 30.38582, "lon": -87.05687, "address": "1370 Tiger Park Ln, Gulf Breeze, FL 32563", "url": "https://qrcodes.pro/DX2uLh", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 1, "daily": {"2026-01-23": 1}, "source": "Salesforce \u2713"}, {"id": 10371042, "name": "QR-TX-WylieISD-WylieHighSchool", "city": "Wylie I", "state": "TX", "location": "Wylie High School", "lat": 32.37485, "lon": -99.78425, "address": "4502 Antilley Rd, Abilene, TX 79606", "url": "https://qrcodes.pro/vT5Opr", "tags": [], "scans_all": 2, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 2, "daily": {"2026-01-10": 1, "2026-01-14": 1}, "source": "Salesforce \u2713"}, {"id": 10344997, "name": "QR-OK-Moore-FairmoorePark", "city": "Moore", "state": "OK", "location": "Fairmoore Park", "lat": 35.34192, "lon": -97.49626, "address": "630 NW 5th St, Moore, OK 73160", "url": "https://qrcodes.pro/N9VKFV", "tags": [], "scans_all": 38, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 36, "daily": {"2026-01-07": 1, "2026-03-06": 1, "2026-03-07": 1, "2026-03-09": 3, "2026-03-12": 2, "2026-03-13": 3, "2026-03-14": 2, "2026-03-17": 1, "2026-03-18": 3, "2026-03-20": 1, "2026-03-21": 1, "2026-03-22": 1, "2026-03-23": 1, "2026-03-24": 1, "2026-03-26": 1, "2026-03-28": 8, "2026-03-29": 4, "2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 9850296, "name": "QR-TX-Brownsville-MonteBellaPark", "city": "Brownsville", "state": "TX", "location": "Monte Bella Park", "lat": 25.95576, "lon": -97.54114, "address": "2485 W Alton Gloor Boulevard, Brownsville, TX 78520", "url": "https://qrcodes.pro/vTLvyv", "tags": [], "scans_all": 102, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 67, "daily": {"2025-10-27": 1, "2025-11-11": 1, "2025-11-12": 3, "2025-11-15": 2, "2025-11-16": 1, "2025-11-17": 1, "2025-11-20": 2, "2025-11-21": 2, "2025-11-25": 2, "2025-11-27": 1, "2025-11-28": 3, "2025-11-29": 1, "2025-12-02": 1, "2025-12-07": 2, "2025-12-10": 1, "2025-12-11": 1, "2025-12-13": 1, "2025-12-20": 1, "2025-12-21": 1, "2025-12-22": 1, "2025-12-24": 1, "2025-12-26": 2, "2025-12-27": 2, "2026-01-02": 3, "2026-01-06": 2, "2026-01-07": 1, "2026-01-09": 3, "2026-01-10": 1, "2026-01-12": 2, "2026-01-15": 1, "2026-01-16": 1, "2026-01-17": 1, "2026-01-22": 1, "2026-01-24": 2, "2026-01-28": 2, "2026-01-30": 2, "2026-02-01": 2, "2026-02-07": 1, "2026-02-08": 2, "2026-02-10": 3, "2026-02-11": 2, "2026-02-13": 1, "2026-02-15": 1, "2026-02-22": 1, "2026-02-24": 2, "2026-03-01": 1, "2026-03-03": 1, "2026-03-06": 2, "2026-03-08": 1, "2026-03-11": 2, "2026-03-14": 1, "2026-03-16": 2, "2026-03-19": 1, "2026-03-20": 3, "2026-03-21": 3, "2026-03-22": 1, "2026-03-23": 6, "2026-03-24": 1, "2026-03-26": 1, "2026-03-28": 2, "2026-03-29": 1, "2026-03-30": 1}, "source": "Salesforce \u2713"}, {"id": 9850291, "name": "QR-MA-TownOfSomerset-TownHallCouncilOnAging", "city": "Town Of Somerset", "state": "MA", "location": "Town Hall Council On Aging", "lat": 41.7718, "lon": -71.1531, "address": "", "url": "https://qrcodes.pro/iCfij1", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {"2025-10-27": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 9808422, "name": "QR-GA-HenryCounty-VillageUnitedPark", "city": "Henry County", "state": "GA", "location": "Village United Park", "lat": 33.53784, "lon": -84.16332, "address": "1041 Millers Mill Rd, Stockbridge, GA 30281", "url": "https://qrcodes.pro/5xGyLe", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {"2025-10-15": 1}, "source": "Salesforce \u2713"}, {"id": 9785517, "name": "QR-NC-JonesCounty-JonesSeniorHighSchool", "city": "Jones County", "state": "NC", "location": "Jones Senior High School", "lat": 35.03518, "lon": -77.33203, "address": "1378 NC-58, Trenton, NC 28585", "url": "https://qrcodes.pro/hMvlRR", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 2, "daily": {"2025-11-30": 1, "2026-01-05": 1, "2026-03-23": 1}, "source": "Salesforce \u2713"}, {"id": 9164185, "name": "QR-NY-SUNYSchenectady-MohawkHudson", "city": "SUNYSchenectady", "state": "NY", "location": "Mohawk Hudson", "lat": 42.81683, "lon": -73.95549, "address": ", Schenectady, NY 12302", "url": "https://qrcodes.pro/wxmBeb", "tags": [], "scans_all": 50, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 4, "daily": {"2025-10-11": 1, "2025-10-15": 1, "2025-11-01": 1, "2025-11-09": 1, "2026-03-09": 2, "2026-03-28": 1, "2026-03-29": 1}, "source": "Salesforce \u2713"}, {"id": 9164189, "name": "QR-NY-Troy-1-Knickerbacker", "city": "Troy", "state": "NY", "location": "1 -Knickerbacker", "lat": 42.75951, "lon": -73.67474, "address": "103rd St & 8th Ave, Troy, NY 12182", "url": "https://qrcodes.pro/UafOup", "tags": [], "scans_all": 23, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 8, "daily": {"2025-11-04": 1, "2025-11-08": 1, "2026-03-08": 3, "2026-03-09": 1, "2026-03-20": 1, "2026-03-24": 1, "2026-03-28": 1, "2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 9139786, "name": "QR-NY-AlbanyCounty-BerneTownPark", "city": "Albany County", "state": "NY", "location": "Berne Town Park", "lat": 42.62572, "lon": -74.15577, "address": "1883 Helderberg Trail, Berne, NY 12023", "url": "https://qrcodes.pro/2UN2Ow", "tags": [], "scans_all": 43, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 5, "daily": {"2025-10-04": 3, "2025-10-08": 4, "2025-10-10": 2, "2025-10-11": 2, "2025-10-12": 2, "2025-10-19": 2, "2025-10-22": 1, "2025-10-25": 1, "2025-10-28": 2, "2025-10-31": 1, "2025-11-10": 1, "2025-12-06": 1, "2025-12-23": 1, "2026-03-09": 1, "2026-03-15": 1, "2026-03-17": 1, "2026-03-21": 1, "2026-03-25": 1}, "source": "Salesforce \u2713"}, {"id": 9164193, "name": "QR-NY-Troy-2-Prospect", "city": "Troy", "state": "NY", "location": "2 -Prospect", "lat": 42.72333, "lon": -73.68392, "address": "Prospect Park Rd, Troy, NY 12180", "url": "https://qrcodes.pro/HfzsfX", "tags": [], "scans_all": 36, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 2, "daily": {"2025-10-05": 2, "2025-10-09": 1, "2025-10-16": 1, "2025-10-19": 1, "2025-10-21": 1, "2025-10-24": 3, "2025-11-01": 1, "2025-11-21": 1, "2025-12-01": 1, "2026-01-11": 1, "2026-03-28": 1}, "source": "Salesforce \u2713"}, {"id": 9164184, "name": "QR-NY-AlbanyCollege-UnionDr", "city": "Albany College", "state": "NY", "location": "Union Dr", "lat": 42.65021, "lon": -73.78, "address": "106 New Scotland Avenue, Albany, NY 12208", "url": "https://qrcodes.pro/Cno60P", "tags": [], "scans_all": 29, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 2, "daily": {"2025-10-06": 1, "2025-10-16": 1, "2026-01-08": 1, "2026-03-09": 1}, "source": "Salesforce \u2713"}, {"id": 8664804, "name": "QR-SF-SanFranciscoCA-LakeMerced", "city": "San Francisco", "state": "CA", "location": "Lake Merced", "lat": 37.71236, "lon": -122.48907, "address": "558 John Muir Drive San Francisco\tCA\t94132", "url": "https://qrcodes.pro/kEEJfb", "tags": [], "scans_all": 299, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 52, "daily": {"2025-10-04": 1, "2025-10-05": 3, "2025-10-06": 4, "2025-10-07": 1, "2025-10-08": 1, "2025-10-09": 2, "2025-10-11": 1, "2025-10-15": 1, "2025-10-16": 1, "2025-10-18": 1, "2025-10-30": 1, "2025-11-01": 1, "2025-11-02": 2, "2025-11-03": 2, "2025-11-04": 1, "2025-11-09": 1, "2025-11-22": 1, "2025-11-23": 2, "2025-11-26": 2, "2025-11-27": 1, "2025-12-03": 1, "2025-12-07": 1, "2025-12-08": 2, "2025-12-09": 1, "2025-12-10": 1, "2025-12-11": 2, "2025-12-13": 1, "2025-12-16": 1, "2025-12-20": 3, "2025-12-21": 1, "2025-12-24": 1, "2025-12-30": 1, "2026-01-02": 2, "2026-01-03": 5, "2026-01-04": 2, "2026-01-06": 1, "2026-01-07": 1, "2026-01-08": 1, "2026-01-10": 2, "2026-01-11": 1, "2026-01-13": 1, "2026-01-14": 1, "2026-01-15": 1, "2026-01-16": 1, "2026-01-17": 2, "2026-01-18": 5, "2026-01-23": 2, "2026-01-24": 1, "2026-01-25": 1, "2026-01-26": 1, "2026-01-29": 5, "2026-01-30": 3, "2026-01-31": 2, "2026-02-03": 3, "2026-02-08": 3, "2026-02-26": 1, "2026-03-01": 1, "2026-03-08": 1, "2026-03-15": 1, "2026-03-22": 1}, "source": "Salesforce \u2713"}, {"id": 9781490, "name": "QR-KS-ParkCity-ParkCentre", "city": "Park City", "state": "KS", "location": "Park Centre", "lat": 37.800012, "lon": -97.318376, "address": "", "url": "https://qrcodes.pro/90Q9Ng", "tags": [], "scans_all": 4, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {"2025-10-09": 4}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 9164188, "name": "QR-NY-CityofSchenectady-Orchard", "city": "Cityof Schenectady", "state": "NY", "location": "Orchard", "lat": 42.80119, "lon": -73.94982, "address": "737 Orchard Street, Schenectady, NY 12303", "url": "https://qrcodes.pro/DRCHk7", "tags": [], "scans_all": 7, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 2, "daily": {"2025-10-06": 1, "2026-03-28": 1, "2026-03-31": 1}, "source": "Salesforce \u2713"}, {"id": 9701730, "name": "QR-NY-Rochester-GeneseeValleyPark", "city": "Rochester", "state": "NY", "location": "Genesee Valley Park", "lat": 43.14096, "lon": -77.57507, "address": "80 Culver Road, Rochester, NY 14610", "url": "https://qrcodes.pro/CJ1Tpt", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {}, "source": "Salesforce \u2713"}, {"id": 9164182, "name": "QR-NY-AlbanyCounty-Tawasentha", "city": "Albany County", "state": "NY", "location": "Tawasentha", "lat": 42.70169, "lon": -73.93464, "address": "188 NY-146, Altamont, NY 12009", "url": "https://qrcodes.pro/14sc2V", "tags": [], "scans_all": 39, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 6, "daily": {"2025-10-03": 1, "2025-10-16": 1, "2025-10-19": 1, "2025-10-26": 1, "2025-11-22": 1, "2025-11-28": 1, "2025-12-24": 1, "2026-03-10": 1, "2026-03-15": 1, "2026-03-25": 1, "2026-03-29": 3}, "source": "Salesforce \u2713"}, {"id": 9164235, "name": "QR-NY-MohonassenSchool-TrackandField", "city": "Mohonassen School", "state": "NY", "location": "Trackand Field", "lat": 42.7868, "lon": -73.9651, "address": "", "url": "https://qrcodes.pro/CfG8ye", "tags": [], "scans_all": 14, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 2, "daily": {"2025-10-11": 1, "2025-11-03": 1, "2025-11-19": 2, "2025-11-22": 1, "2026-03-26": 1, "2026-03-31": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 9164196, "name": "QR-NY-Troy-4-Beman", "city": "Troy", "state": "NY", "location": "4 -Beman", "lat": 42.73292, "lon": -73.67428, "address": "", "url": "https://qrcodes.pro/AM9Pp1", "tags": [], "scans_all": 36, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 5, "daily": {"2025-10-05": 2, "2025-10-11": 2, "2025-11-08": 1, "2025-11-13": 1, "2025-12-02": 1, "2025-12-14": 1, "2025-12-31": 1, "2026-01-10": 1, "2026-03-08": 1, "2026-03-28": 1, "2026-03-29": 1, "2026-03-30": 1}, "source": "Salesforce \u2713"}, {"id": 9164194, "name": "QR-NY-Troy-3-112thSt", "city": "Troy", "state": "NY", "location": "3 - 112 th St", "lat": 42.77054, "lon": -73.6761, "address": "", "url": "https://qrcodes.pro/5ZajLL", "tags": [], "scans_all": 9, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 4, "daily": {"2025-10-04": 1, "2026-02-27": 1, "2026-03-12": 3}, "source": "Salesforce \u2713"}, {"id": 8664801, "name": "QR-SF-SanFranciscoCA-MarinaGreen", "city": "San Francisco", "state": "CA", "location": "Marina Green", "lat": 37.80614, "lon": -122.43512, "address": "180 Marina Blvd, San Francisco, CA 94123", "url": "https://qrcodes.pro/fs02sv", "tags": [], "scans_all": 537, "scans_today": 0, "scans_week": 3, "scans_month": 0, "scans_year": 228, "daily": {"2025-10-03": 2, "2025-10-04": 4, "2025-10-05": 5, "2025-10-06": 3, "2025-10-08": 1, "2025-10-09": 2, "2025-10-11": 2, "2025-10-12": 1, "2025-10-13": 1, "2025-10-14": 2, "2025-10-15": 2, "2025-10-18": 2, "2025-10-19": 1, "2025-10-20": 1, "2025-10-21": 2, "2025-10-24": 2, "2025-10-25": 1, "2025-10-26": 3, "2025-10-27": 1, "2025-10-28": 1, "2025-10-29": 3, "2025-10-30": 1, "2025-10-31": 1, "2025-11-01": 2, "2025-11-02": 1, "2025-11-03": 2, "2025-11-07": 1, "2025-11-08": 2, "2025-11-10": 3, "2025-11-11": 1, "2025-11-14": 1, "2025-11-15": 1, "2025-11-16": 3, "2025-11-18": 1, "2025-11-19": 2, "2025-11-20": 1, "2025-11-22": 2, "2025-11-23": 1, "2025-11-24": 2, "2025-11-25": 1, "2025-11-26": 2, "2025-11-27": 2, "2025-11-29": 1, "2025-11-30": 2, "2025-12-01": 1, "2025-12-02": 1, "2025-12-03": 2, "2025-12-04": 1, "2025-12-05": 1, "2025-12-14": 3, "2025-12-15": 1, "2025-12-16": 1, "2025-12-20": 1, "2025-12-22": 1, "2025-12-23": 1, "2025-12-24": 1, "2025-12-27": 2, "2025-12-29": 2, "2026-01-03": 3, "2026-01-05": 1, "2026-01-06": 2, "2026-01-09": 2, "2026-01-10": 2, "2026-01-11": 2, "2026-01-13": 2, "2026-01-16": 1, "2026-01-17": 1, "2026-01-18": 1, "2026-01-19": 4, "2026-01-20": 1, "2026-01-21": 2, "2026-01-24": 1, "2026-01-26": 1, "2026-01-27": 1, "2026-01-29": 1, "2026-01-30": 1, "2026-02-01": 2, "2026-02-02": 5, "2026-02-03": 2, "2026-02-04": 1, "2026-02-05": 2, "2026-02-06": 2, "2026-02-07": 1, "2026-02-08": 1, "2026-02-09": 3, "2026-02-10": 5, "2026-02-12": 2, "2026-02-13": 1, "2026-02-15": 1, "2026-02-16": 1, "2026-02-22": 1, "2026-02-28": 1, "2026-03-02": 1, "2026-03-03": 1, "2026-03-04": 2, "2026-03-05": 2, "2026-03-06": 1, "2026-03-07": 2, "2026-03-08": 81, "2026-03-09": 41, "2026-03-10": 3, "2026-03-11": 3, "2026-03-12": 5, "2026-03-13": 2, "2026-03-14": 1, "2026-03-15": 2, "2026-03-16": 1, "2026-03-18": 2, "2026-03-19": 1, "2026-03-20": 1, "2026-03-21": 1, "2026-03-22": 1, "2026-03-23": 2, "2026-03-26": 1, "2026-03-27": 1, "2026-03-28": 3, "2026-03-29": 4, "2026-03-30": 3}, "source": "Salesforce \u2713"}, {"id": 8702075, "name": "QR-CA-StanfordUniversity-ArguelloField", "city": "Stanford University", "state": "CA", "location": "Arguello Field", "lat": 37.42383, "lon": -122.16484, "address": "498 Arguello Way, Stanford, CA 94305", "url": "https://qrcodes.pro/0dfdDy", "tags": [], "scans_all": 184, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 36, "daily": {"2025-10-06": 3, "2025-10-11": 2, "2025-10-12": 1, "2025-10-13": 2, "2025-10-14": 1, "2025-10-15": 1, "2025-10-16": 1, "2025-10-17": 2, "2025-10-19": 1, "2025-10-20": 1, "2025-10-21": 1, "2025-10-22": 1, "2025-10-25": 1, "2025-10-27": 1, "2025-10-29": 1, "2025-10-30": 1, "2025-10-31": 1, "2025-11-02": 3, "2025-11-03": 2, "2025-11-04": 1, "2025-11-07": 1, "2025-11-08": 1, "2025-11-10": 1, "2025-11-12": 1, "2025-11-16": 1, "2025-11-19": 1, "2025-11-21": 1, "2025-11-24": 2, "2025-11-25": 1, "2025-11-26": 1, "2025-11-28": 2, "2025-11-29": 2, "2025-12-01": 1, "2025-12-03": 1, "2025-12-08": 1, "2025-12-13": 1, "2025-12-15": 2, "2025-12-21": 1, "2025-12-22": 1, "2025-12-26": 1, "2025-12-27": 2, "2026-01-02": 1, "2026-01-14": 1, "2026-01-17": 2, "2026-01-22": 1, "2026-01-25": 1, "2026-01-28": 1, "2026-02-01": 2, "2026-02-05": 1, "2026-02-07": 1, "2026-02-10": 1, "2026-02-11": 1, "2026-02-12": 1, "2026-02-13": 1, "2026-02-21": 2, "2026-02-22": 3, "2026-02-23": 1, "2026-02-25": 1, "2026-02-26": 2, "2026-02-27": 1, "2026-03-01": 3, "2026-03-04": 1, "2026-03-07": 1, "2026-03-16": 1, "2026-03-17": 1, "2026-03-18": 1, "2026-03-21": 1, "2026-03-29": 1, "2026-03-30": 1}, "source": "Salesforce \u2713"}, {"id": 9484548, "name": "QR-FL-HernandoCounty-VeteransMemorialPark", "city": "Hernando County", "state": "FL", "location": "Veterans Memorial Park", "lat": 28.46199, "lon": -82.52101, "address": "12254 Spring Hill Dr, Spring Hill, FL 34609", "url": "https://qrcodes.pro/0pPFDv", "tags": [], "scans_all": 453, "scans_today": 0, "scans_week": 4, "scans_month": 0, "scans_year": 201, "daily": {"2025-10-08": 1, "2025-10-30": 8, "2025-10-31": 8, "2025-11-01": 3, "2025-11-02": 7, "2025-11-03": 9, "2025-11-04": 6, "2025-11-05": 5, "2025-11-06": 5, "2025-11-07": 2, "2025-11-08": 4, "2025-11-09": 2, "2025-11-10": 2, "2025-11-11": 5, "2025-11-12": 4, "2025-11-13": 7, "2025-11-14": 1, "2025-11-15": 5, "2025-11-16": 5, "2025-11-17": 3, "2025-11-18": 1, "2025-11-19": 3, "2025-11-20": 6, "2025-11-21": 2, "2025-11-22": 5, "2025-11-23": 3, "2025-11-24": 4, "2025-11-25": 2, "2025-11-26": 6, "2025-11-27": 5, "2025-11-28": 4, "2025-11-29": 3, "2025-11-30": 2, "2025-12-01": 2, "2025-12-02": 7, "2025-12-03": 4, "2025-12-04": 10, "2025-12-05": 9, "2025-12-06": 4, "2025-12-07": 5, "2025-12-08": 4, "2025-12-09": 2, "2025-12-10": 5, "2025-12-11": 3, "2025-12-12": 2, "2025-12-13": 4, "2025-12-14": 3, "2025-12-15": 3, "2025-12-16": 1, "2025-12-17": 3, "2025-12-19": 4, "2025-12-20": 2, "2025-12-21": 3, "2025-12-22": 2, "2025-12-23": 1, "2025-12-24": 4, "2025-12-25": 6, "2025-12-26": 1, "2025-12-27": 3, "2025-12-28": 1, "2025-12-29": 3, "2025-12-30": 3, "2025-12-31": 4, "2026-01-01": 6, "2026-01-02": 4, "2026-01-03": 2, "2026-01-04": 10, "2026-01-05": 3, "2026-01-06": 2, "2026-01-07": 4, "2026-01-08": 1, "2026-01-09": 4, "2026-01-10": 3, "2026-01-11": 1, "2026-01-12": 3, "2026-01-13": 5, "2026-01-14": 1, "2026-01-15": 1, "2026-01-16": 2, "2026-01-17": 5, "2026-01-18": 3, "2026-01-20": 2, "2026-01-21": 2, "2026-01-23": 3, "2026-01-24": 4, "2026-01-25": 10, "2026-01-28": 1, "2026-01-30": 5, "2026-01-31": 1, "2026-02-01": 1, "2026-02-03": 2, "2026-02-04": 5, "2026-02-05": 1, "2026-02-06": 1, "2026-02-08": 2, "2026-02-09": 2, "2026-02-10": 3, "2026-02-11": 3, "2026-02-13": 2, "2026-02-14": 3, "2026-02-15": 4, "2026-02-16": 1, "2026-02-17": 3, "2026-02-18": 1, "2026-02-19": 1, "2026-02-21": 3, "2026-02-22": 2, "2026-02-24": 2, "2026-02-25": 3, "2026-02-26": 2, "2026-02-27": 1, "2026-03-01": 6, "2026-03-04": 5, "2026-03-05": 2, "2026-03-06": 5, "2026-03-07": 1, "2026-03-08": 4, "2026-03-11": 1, "2026-03-13": 1, "2026-03-14": 2, "2026-03-15": 1, "2026-03-16": 2, "2026-03-17": 4, "2026-03-18": 1, "2026-03-19": 3, "2026-03-20": 3, "2026-03-21": 3, "2026-03-22": 5, "2026-03-24": 1, "2026-03-25": 1, "2026-03-26": 1, "2026-03-28": 1, "2026-03-29": 8, "2026-03-30": 2, "2026-03-31": 2}, "source": "Salesforce \u2713"}, {"id": 10955480, "name": "QR-MS-WashingtonCounty-WashingtonCountyConventionCenter", "city": "Washington County", "state": "MS", "location": "Washington County Convention Center", "lat": 33.262671, "lon": -90.918355, "address": "", "url": "https://qrcodes.pro/bbxwde", "tags": [], "scans_all": 1, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-17": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 10915200, "name": "QR-GA-StoneMountain-McCurdyPark", "city": "Stone Mountain", "state": "GA", "location": "Mc Curdy Park", "lat": 33.80699, "lon": -84.17716, "address": "5190 W Mountain St, Stone Mountain, GA 30083", "url": "https://qrcodes.pro/Tv8ptd", "tags": [], "scans_all": 2, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 2, "daily": {"2026-03-13": 1, "2026-03-16": 1}, "source": "Salesforce \u2713"}, {"id": 11042495, "name": "QR-OK-ClevelandPublic Schools-ClevelandPublicSchools", "city": "Cleveland Public Schools", "state": "OK", "location": "Cleveland Public Schools", "lat": 33.766278, "lon": -90.720777, "address": "", "url": "https://qrcodes.pro/GUxxXf", "tags": [], "scans_all": 0, "scans_today": 0, "scans_week": 0, "scans_month": 0, "scans_year": 0, "daily": {}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 11033889, "name": "QR-NV-LasVegas-EastLasVegasFamilyPark", "city": "Las Vegas", "state": "NV", "location": "East Las Vegas Family Park", "lat": 36.152802, "lon": -115.151751, "address": "", "url": "https://qrcodes.pro/BGe3Hp", "tags": [], "scans_all": 3, "scans_today": 0, "scans_week": 1, "scans_month": 0, "scans_year": 1, "daily": {"2026-03-30": 1}, "source": "Geocoded \u26a0\ufe0f verify"}, {"id": 11033908, "name": "QR-NV-LasVegas-KelloggZaherSportsComplex", "city": "Las Vegas", "state": "NV", "location": "Kellogg Zaher Sports Complex", "lat": 36.155699, "lon": -115.139061, "address": "", "url": "https://qrcodes.pro/gfUJ7i", "tags": [], "scans_all": 6, "scans_today": 0, "scans_week": 2, "scans_month": 0, "scans_year": 6, "daily": {"2026-03-26": 2, "2026-03-27": 2, "2026-03-30": 2}, "source": "Geocoded \u26a0\ufe0f verify"}];
+
+// ── Apps Script Web App URL ───────────────────────────────────────────────────
+// Paste your deployment URL here after deploying from Apps Script:
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzOuzlz5sf3nqyUtfl0tSLbduSJ2Esxz4hzpqeHjtaodVC7d1FDoEXDuBJ55sbbN0o/exec';
+
+// ── Basemaps ──────────────────────────────────────────────────────────────────
+const TILES = {
+  light:  { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',  sub: 'abcd', dark: false, attr: '&copy; OpenStreetMap &copy; CARTO' },
+  dark:   { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',   sub: 'abcd', dark: true,  attr: '&copy; OpenStreetMap &copy; CARTO' },
+  aerial: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', sub: null, dark: true, attr: 'Tiles &copy; Esri' }
+};
+
+let tileLayer = null, isDark = false, currentRange = 'all', currentViz = 'bubble';
+let heatLayer = null, heatLabelsLayer = null;
+let customFrom = null, customTo = null;
+let currentData = JSON.parse(JSON.stringify(COURTS));
+// Clear all pre-loaded CSV daily data — date ranges use live Uniqode data only
+currentData.forEach(c => { c.daily = {}; });
+
+const map = L.map('map', { center: [38.5, -98.0], zoom: 4 });
+const markersLayer = L.layerGroup().addTo(map);
+
+function setBasemap(type) {
+  isDark = TILES[type].dark;
+  if (tileLayer) map.removeLayer(tileLayer);
+  const t = TILES[type];
+  tileLayer = L.tileLayer(t.url, { attribution: t.attr, subdomains: t.sub || 'abc', maxZoom: 19 }).addTo(map);
+  document.querySelectorAll('.map-legend').forEach(l => l.classList.toggle('dark', isDark));
+}
+setBasemap('light');
+
+function getColor(scans, dark) {
+  if (scans === 0) return dark ? '#555' : '#ccc';
+  if (scans < 5)   return '#81c784';
+  if (scans < 20)  return '#43a047';
+  if (scans < 50)  return '#2e7d32';
+  if (scans < 100) return '#1b5e20';
+  if (scans < 300) return '#1565c0';
+  return '#0d47a1';
+}
+function getRadius(scans) {
+  return scans === 0 ? 5 : Math.max(6, Math.min(32, 6 + Math.sqrt(scans) * 1.6));
+}
+
+function dateStr(d) { return d.toISOString().slice(0,10); }
+function getScanCount(court, range) {
+  const daily = court.daily || {};
+  const today = dateStr(new Date());
+  switch(range) {
+    case 'all': return court.scans_all || 0;
+    case 'today': return daily[today] || 0;
+    case 'yesterday': { const y = new Date(); y.setDate(y.getDate()-1); return daily[dateStr(y)] || 0; }
+    case '7days': {
+      let s = 0;
+      for (let i = 0; i < 7; i++) { const d = new Date(); d.setDate(d.getDate()-i); s += daily[dateStr(d)] || 0; }
+      return s;
+    }
+    case '30days': {
+      let s = 0;
+      for (let i = 0; i < 30; i++) { const d = new Date(); d.setDate(d.getDate()-i); s += daily[dateStr(d)] || 0; }
+      return s;
+    }
+    case 'year': {
+      const yr = new Date().getFullYear().toString();
+      return Object.entries(daily).filter(([d]) => d.startsWith(yr)).reduce((s,[,v]) => s+v, 0);
+    }
+    case 'custom':
+      if (!customFrom || !customTo) return 0;
+      return Object.entries(daily).filter(([d]) => d >= customFrom && d <= customTo).reduce((s,[,v]) => s+v, 0);
+    default: return court.scans_all || 0;
+  }
+}
+
+function setDateRange(range) {
+  currentRange = range;
+  document.getElementById('custom-range').style.display = range === 'custom' ? 'flex' : 'none';
+  if (range !== 'custom') { renderMarkers(); updateSidebar(); }
+}
+function applyCustomRange() {
+  customFrom = document.getElementById('date-from').value;
+  customTo   = document.getElementById('date-to').value;
+  if (customFrom && customTo) renderMarkers();
+}
+
+function fmtName(raw) {
+  return raw.replace(/^QR-[^-]+-[^-]+-/, '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function courtPopupHTML(court) {
+  const locName = fmtName(court.name);
+  const scans = getScanCount(court, currentRange);
+  const isSF = court.source === 'salesforce';
+  const srcBadge = isSF
+    ? '<span class="coord-source coord-sf">✓ Salesforce coords</span>'
+    : '<span class="coord-source coord-geo">⚠ Coords need verification</span>';
+  return `<div class="court-popup">
+    <h3>${locName}</h3>
+    <div class="city">&#128205; ${court.city}, ${court.state}</div>
+    ${court.address ? `<div class="address">${court.address}</div>` : ''}
+    <div class="scan-count">${scans.toLocaleString()}</div>
+    <div class="scan-lbl">${RANGE_LABELS[currentRange] || 'scans'}</div>
+    ${srcBadge}
+  </div>`;
+
+}
+
+const RANGE_LABELS = {
+  all:'all-time scans', today:'scans today', yesterday:'scans yesterday', '7days':'scans last 7 days',
+  '30days':'scans last 30 days', year:'scans this year', custom:'scans in range'
+};
+
+function renderMarkers() {
+  markersLayer.clearLayers();
+  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+  if (heatLabelsLayer) { map.removeLayer(heatLabelsLayer); heatLabelsLayer = null; }
+  let visible = 0, totalScans = 0, activeCount = 0;
+
+  currentData.forEach(court => {
+    if (!court.lat || !court.lon) return;
+    const scans = getScanCount(court, currentRange);
+    visible++;
+    totalScans += scans;
+    if (scans > 0) activeCount++;
+
+    const isSF = court.source && court.source.includes('Salesforce');
+    const circle = L.circleMarker([court.lat, court.lon], {
+      radius: getRadius(scans),
+      fillColor: getColor(scans, isDark),
+      color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+      weight: isSF ? 1.5 : 2.5,
+      opacity: 1,
+      fillOpacity: scans === 0 ? 0.4 : 0.85,
+      dashArray: isSF ? null : '4'   // dashed border = unverified coords
+    });
+
+    circle.bindPopup(courtPopupHTML(court), { maxWidth: 240 });
+
+    circle.on('mouseover', function() { this.openPopup(); });
+    markersLayer.addLayer(circle);
+  });
+
+  document.getElementById('s-visible').textContent = visible;
+  document.getElementById('s-total').textContent = totalScans.toLocaleString();
+  document.getElementById('s-active').textContent = activeCount;
+  updateSidebar();
+  updateLegend();
+  // Heatmap: leaflet.heat with raw scan counts — scales with zoom, color reflects real data
+  if (currentViz === 'heat') {
+    markersLayer.clearLayers();
+    const counts = currentData.filter(c => c.lat && c.lon).map(c => getScanCount(c, currentRange));
+    const rawMax = Math.max(...counts, 1);
+    const points = currentData
+      .filter(c => c.lat && c.lon)
+      .map(c => [c.lat, c.lon, getScanCount(c, currentRange)]);
+    heatLayer = L.heatLayer(points, heatParams(map.getZoom(), rawMax)).addTo(map);
+    updateHeatLabels();
+  }
+}
+
+function heatParams(zoom, rawMax) {
+  // radius stays small so blobs don't bleed across states
+  // color intensity (max vs point weight) handles the high/low differentiation
+  let radius, blur;
+  if (zoom <= 5)       { radius = 18; blur = 10; }
+  else if (zoom <= 7)  { radius = 22; blur = 13; }
+  else if (zoom <= 9)  { radius = 28; blur = 16; }
+  else if (zoom <= 11) { radius = 35; blur = 20; }
+  else                 { radius = 45; blur = 25; }
+  return { radius, blur, max: rawMax * 0.5, minOpacity: 0.35,
+    gradient: {0.0:'#fd8d3c', 0.3:'#f03b20', 0.6:'#bd0026', 0.85:'#7b0d7e', 1.0:'#2d004b'} };
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────────
+let legendDiv = null;
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = function() {
+  legendDiv = L.DomUtil.create('div', 'map-legend');
+  updateLegend();
+  return legendDiv;
+};
+legend.addTo(map);
+
+function updateLegend() {
+  if (!legendDiv) return;
+  if (currentViz === 'heat') {
+    legendDiv.innerHTML = `
+      <h4>Scan Intensity</h4>
+      <div style="width:140px;height:12px;border-radius:4px;margin:6px 0;background:linear-gradient(to right,#ffffb2,#fecc5c,#fd8d3c,#f03b20,#bd0026,#49006a)"></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#888;margin-bottom:6px;">
+        <span>Low</span><span>Medium</span><span>High</span>
+      </div>
+    `;
+  } else {
+    legendDiv.innerHTML = `
+      <h4>QR Scans</h4>
+      <div class="legend-row"><span class="legend-dot" style="width:10px;height:10px;background:#ccc"></span>0</div>
+      <div class="legend-row"><span class="legend-dot" style="width:12px;height:12px;background:#81c784"></span>1–4</div>
+      <div class="legend-row"><span class="legend-dot" style="width:14px;height:14px;background:#43a047"></span>5–19</div>
+      <div class="legend-row"><span class="legend-dot" style="width:18px;height:18px;background:#2e7d32"></span>20–49</div>
+      <div class="legend-row"><span class="legend-dot" style="width:22px;height:22px;background:#1b5e20"></span>50–99</div>
+      <div class="legend-row"><span class="legend-dot" style="width:26px;height:26px;background:#1565c0"></span>100–299</div>
+      <div class="legend-row"><span class="legend-dot" style="width:30px;height:30px;background:#0d47a1"></span>300+</div>
+      <div style="margin-top:8px;padding-top:6px;border-top:1px solid #eee;font-size:0.68rem;color:#888">
+        Solid border = Salesforce coords<br>Dashed border = needs verification
+      </div>
+    `;
+  }
+}
+
+// ── Load data from Google Sheet (on page open) ────────────────────────────────
+async function loadFromSheet(isRefresh) {
+  const btn  = document.getElementById('refresh-btn');
+
+  if (!APPS_SCRIPT_URL) {
+    // No URL set yet — use baked-in data
+    console.log('Using snapshot data — deploy Apps Script to go live');
+    renderMarkers();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = isRefresh ? '⏳ Pulling from Uniqode…' : '⏳ Loading…';
+
+  const url = isRefresh ? APPS_SCRIPT_URL + '?action=refresh' : APPS_SCRIPT_URL;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    if (data.courts && data.courts.length) {
+      // Merge sheet data into currentData (preserves daily breakdown for date filters)
+      const sheetMap = {};
+      data.courts.forEach(c => { sheetMap[c.id] = c; });
+
+      currentData = COURTS.map(c => {
+        const s = sheetMap[c.id];
+        if (!s) return c;
+        return {
+          ...c,
+          lat:         s.lat        || c.lat,
+          lon:         s.lon        || c.lon,
+          address:     s.address    || c.address,
+          scans_all:   s.scans_all  != null ? s.scans_all  : c.scans_all,
+          daily:       s.daily      || {},
+          source:      s.source     || c.source
+        };
+      });
+
+      renderMarkers();
+
+      const ts = data.refreshed || data.lastRefresh;
+      const label = isRefresh ? 'Uniqode sync: ' : 'Sheet loaded: ';
+      console.log(label + (ts ? new Date(ts).toLocaleTimeString() : new Date().toLocaleTimeString()));
+      btn.innerHTML = isRefresh ? '✓ Updated' : '↻ Refresh Scans';
+      setTimeout(() => { btn.innerHTML = '↻ Refresh Scans'; btn.disabled = false; }, 2500);
+    }
+  } catch(e) {
+    console.log('Could not reach sheet — showing snapshot');
+    btn.innerHTML = '↻ Refresh Scans';
+    btn.disabled = false;
+    renderMarkers(); // fall back to baked-in data
+    console.error('Sheet load error:', e);
+  }
+}
+
+function refreshFromSheet() { loadFromSheet(true); }
+
+function openSourceModal() {
+  const unverified = currentData.filter(c => c.source !== 'salesforce').length;
+  const el = document.getElementById('modal-unverified-count');
+  if (el) el.textContent = `${unverified} of ${currentData.length} locations unconfirmed`;
+  document.getElementById('source-modal').style.display = 'flex';
+}
+
+function setBasemapFromSelect(val) { setBasemap(val); }
+function updateHeatLabels() {
+  if (heatLabelsLayer) { map.removeLayer(heatLabelsLayer); heatLabelsLayer = null; }
+  if (currentViz !== 'heat') return;
+  const zoom = map.getZoom();
+  if (zoom < 7) return;
+  heatLabelsLayer = L.layerGroup().addTo(map);
+  currentData.forEach(c => {
+    if (!c.lat || !c.lon) return;
+    const label = c.location || c.name || '';
+    L.circleMarker([c.lat, c.lon], {
+      radius: 5, color: 'white', fillColor: 'white',
+      fillOpacity: 0.9, weight: 1.5, opacity: 1
+    }).bindTooltip(label, {
+      permanent: true, direction: 'top', offset: [0, -7],
+      className: 'heat-label'
+    }).bindPopup(courtPopupHTML(c), { maxWidth: 240 })
+      .addTo(heatLabelsLayer);
+  });
+}
+
+map.on('zoomend', () => {
+  if (currentViz !== 'heat') return;
+  if (heatLayer) {
+    const counts = currentData.filter(c => c.lat && c.lon).map(c => getScanCount(c, currentRange));
+    const rawMax = Math.max(...counts, 1);
+    heatLayer.setOptions(heatParams(map.getZoom(), rawMax));
+  }
+  updateHeatLabels();
+});
+
+function heatColors(ratio) {
+  // Returns [outer, mid, inner] colors based on intensity ratio 0–1
+  if (ratio > 0.75) return ['#fd8d3c', '#bd0026', '#2d004b'];
+  if (ratio > 0.50) return ['#fecc5c', '#f03b20', '#7b0d7e'];
+  if (ratio > 0.28) return ['#ffffb2', '#fd8d3c', '#f03b20'];
+  if (ratio > 0.10) return ['#ffffb2', '#fecc5c', '#fd8d3c'];
+  return ['#ffffb2', '#ffffb2', '#fecc5c'];
+}
+
+function setViz(val) {
+  currentViz = val;
+  renderMarkers();
+}
+function setDateRangeFromSelect(val) {
+  document.getElementById('custom-range').style.display = val === 'custom' ? 'flex' : 'none';
+  setDateRange(val);
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const arrow = document.getElementById('sidebar-tab-arrow');
+  if (sb.classList.contains('collapsed')) {
+    sb.classList.remove('collapsed');
+    arrow.innerHTML = '&#8249;';
+  } else {
+    sb.classList.add('collapsed');
+    arrow.innerHTML = '&#8250;';
+  }
+  setTimeout(() => map.invalidateSize(), 310);
+}
+
+// City search
+let activeSearchCity = null;
+async function searchCity() {
+  const q = document.getElementById('city-search').value.trim();
+  if (!q) return;
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&featuretype=city,town,municipality&addressdetails=1`);
+    const data = await res.json();
+    if (!data.length) { alert('City not found. Try a different spelling.'); return; }
+    const place = data[0];
+    const bbox = place.boundingbox; // [s, n, w, e] as strings
+    map.fitBounds([[parseFloat(bbox[0]),parseFloat(bbox[2])],[parseFloat(bbox[1]),parseFloat(bbox[3])]]);
+    activeSearchCity = q.toLowerCase();
+    document.getElementById('clear-search-btn').style.display = 'inline-block';
+    updateSidebar(activeSearchCity);
+  } catch(err) { alert('Search failed. Check your connection.'); }
+}
+function clearSearch() {
+  document.getElementById('city-search').value = '';
+  document.getElementById('clear-search-btn').style.display = 'none';
+  activeSearchCity = null;
+  updateSidebar(null);
+}
+
+let expandedCity = null;
+function toggleCityDrilldown(key) {
+  expandedCity = (expandedCity === key) ? null : key;
+  updateSidebar();
+}
+
+function updateSidebar(filterCity) {
+  const cityFilter = (filterCity !== undefined ? filterCity : activeSearchCity);
+  let data = [...currentData];
+  if (cityFilter) {
+    data = data.filter(c => c.city && c.city.toLowerCase().includes(cityFilter));
+  }
+  const sorted = [...data].sort((a,b) => getScanCount(b, currentRange) - getScanCount(a, currentRange));
+
+  // Top 3
+  const top3 = sorted.slice(0,3);
+  const rankBg = ['#0891b2','#38b2cc','#7dd3e8'];
+  document.getElementById('top3-list').innerHTML = top3.map((c,i) => `
+    <div class="top3-item">
+      <div class="top3-rank" style="background:${rankBg[i]}">${i+1}</div>
+      <div class="top3-info">
+        <div class="top3-name">${c.location || c.name}</div>
+        <div class="top3-city">${c.city}, ${c.state}</div>
+      </div>
+      <div class="top3-scans">${getScanCount(c, currentRange).toLocaleString()}</div>
+    </div>
+  `).join('');
+
+  // When city search is active: show individual courts directly
+  if (cityFilter) {
+    const maxS = getScanCount(sorted[0], currentRange) || 1;
+    document.getElementById('city-list').innerHTML = sorted.map(c => `
+      <div class="city-item">
+        <div class="city-left">
+          <div class="city-name" style="font-size:0.8rem;">${c.location || c.name}</div>
+          <div class="city-state">${c.city}, ${c.state}</div>
+          <div class="city-bar"><div class="city-bar-fill" style="width:${Math.round(getScanCount(c,currentRange)/maxS*100)}%"></div></div>
+        </div>
+        <div class="city-scans">${getScanCount(c, currentRange).toLocaleString()}</div>
+      </div>
+    `).join('');
+    return;
+  }
+
+  // Default: city-grouped view with drill-down
+  const cityMap = {};
+  data.forEach(c => {
+    const key = c.city + '|' + c.state;
+    if (!cityMap[key]) cityMap[key] = {city: c.city, state: c.state, scans: 0, count: 0, courts: []};
+    cityMap[key].scans += getScanCount(c, currentRange);
+    cityMap[key].count++;
+    cityMap[key].courts.push(c);
+  });
+  const cities = Object.values(cityMap).sort((a,b) => b.scans - a.scans);
+  const maxScans = cities[0]?.scans || 1;
+
+  document.getElementById('city-list').innerHTML = cities.map(entry => {
+    const key = entry.city + '|' + entry.state;
+    const isOpen = expandedCity === key;
+    const canDrill = entry.count > 1;
+    const courtsSorted = [...entry.courts].sort((a,b) => getScanCount(b, currentRange) - getScanCount(a, currentRange));
+    const safeKey = key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const drillRows = isOpen ? `<div class="drill-list">${
+      courtsSorted.map(ct => `
+        <div class="drill-item">
+          <div class="drill-name">${ct.location || ct.name}</div>
+          <div class="drill-scans">${getScanCount(ct, currentRange).toLocaleString()}</div>
+        </div>`).join('')
+    }</div>` : '';
+    return `
+      <div class="city-item${canDrill ? ' city-drillable' : ''}" ${canDrill ? `onclick="toggleCityDrilldown('${safeKey}')"` : ''}>
+        <div class="city-left">
+          <div class="city-name">${entry.city}${canDrill ? ` <span style="color:#bbb;font-size:0.68rem;">${isOpen?'▲':'▼'}</span>` : ''}</div>
+          <div class="city-state">${entry.state} &bull; ${entry.count} fitness court${entry.count>1?'s':''}</div>
+          <div class="city-bar"><div class="city-bar-fill" style="width:${Math.round(entry.scans/maxScans*100)}%"></div></div>
+        </div>
+        <div class="city-scans">${entry.scans.toLocaleString()}</div>
+      </div>${drillRows}`;
+  }).join('');
+}
+
+/// On page load: pull from sheet automatically if URL is set, else use baked-in data
+loadFromSheet(false);
+</script>
+
+<div id="sidebar-overlay"></div>
+<button id="sidebar-toggle" onclick="toggleSidebar()">&#9776; Rankings</button>
+</div>
+</div>
+<div id="source-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;font-family:'Inter',sans-serif;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:white;border-radius:12px;padding:28px 32px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <h3 style="font-size:0.95rem;font-weight:700;color:#0f172a;margin-bottom:16px;letter-spacing:-0.01em;">About This Map</h3>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.07em;font-weight:600;color:#94a3b8;margin-bottom:6px;">Data Source</div>
+      <p style="font-size:0.8rem;color:#475569;line-height:1.6;">Scan counts reflect <strong style="color:#0f172a;">QR code scans only</strong>, tracked via Uniqode. Each Fitness Court has a unique on-site QR code. App downloads, manual check-ins, and other engagement are not included.</p>
+    </div>
+
+    <div style="border-top:1px solid #e2e8f0;padding-top:16px;margin-bottom:20px;">
+      <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.07em;font-weight:600;color:#94a3b8;margin-bottom:8px;">Coordinate Accuracy</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
+        <div>
+          <div style="font-size:0.8rem;font-weight:600;color:#92400e;" id="modal-unverified-count">— unconfirmed locations</div>
+          <div style="font-size:0.7rem;color:#b45309;margin-top:2px;">Coordinates need field verification</div>
+        </div>
+        <span style="font-size:1.2rem;">⚠️</span>
+      </div>
+      <p style="font-size:0.72rem;color:#64748b;line-height:1.5;margin-top:8px;">Confirmed coordinates are sourced from Salesforce. Unconfirmed locations were geocoded from address and may be imprecise.</p>
+    </div>
+
+    <button onclick="document.getElementById('source-modal').style.display='none'" style="background:#0891b2;color:white;border:none;border-radius:6px;padding:8px 20px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Got it</button>
+  </div>
+</div>
+</body>
+</html>
