@@ -478,17 +478,18 @@ async function loadFromSheet(isRefresh) {
       const sheetMap = {};
       data.courts.forEach(c => { sheetMap[c.id] = c; });
 
-      currentData = COURTS.map(c => {
+      // Map from currentData (not COURTS) so daily already loaded from Supabase is preserved
+      currentData = currentData.map(c => {
         const s = sheetMap[c.id];
         if (!s) return c;
         return {
           ...c,
-          lat:         s.lat        || c.lat,
-          lon:         s.lon        || c.lon,
-          address:     s.address    || c.address,
-          scans_all:   s.scans_all  != null ? s.scans_all  : c.scans_all,
-          daily:       s.daily      || {},
-          source:      s.source     || c.source
+          lat:       s.lat      || c.lat,
+          lon:       s.lon      || c.lon,
+          address:   s.address  || c.address,
+          scans_all: s.scans_all != null ? s.scans_all : c.scans_all,
+          source:    s.source   || c.source
+          // daily intentionally omitted — owned by loadDailyFromSupabase
         };
       });
 
@@ -501,8 +502,7 @@ async function loadFromSheet(isRefresh) {
       setTimeout(() => { btn.innerHTML = '↻ Refresh Scans'; btn.disabled = false; }, 2500);
     }
   } catch(e) {
-    console.log('Could not reach sheet — falling back to baked-in data');
-    currentData = JSON.parse(JSON.stringify(COURTS));
+    console.log('Could not reach sheet — keeping current data');
     btn.innerHTML = '↻ Refresh Scans';
     btn.disabled = false;
     renderMarkers();
