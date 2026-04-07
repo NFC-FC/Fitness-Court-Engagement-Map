@@ -153,7 +153,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; over
     <h1>Fitness Court Engagement Map</h1>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
-    <div style="font-size:0.68rem;opacity:0.75;font-family:'Inter',sans-serif;font-weight:400;letter-spacing:0.01em;">April 3, 2026</div>
+    <div id="header-date" style="font-size:0.68rem;opacity:0.75;font-family:'Inter',sans-serif;font-weight:400;letter-spacing:0.01em;"></div>
+    <script>document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});</script>
     <button id="refresh-btn" onclick="refreshFromSheet()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.45);color:white;border-radius:6px;padding:5px 14px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:0.01em;">&#8635; Refresh Scans</button>
     <button onclick="openSourceModal()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);color:white;border-radius:50%;width:22px;height:22px;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;" title="Data source info">&#9432;</button>
   </div>
