@@ -272,17 +272,27 @@ function setBasemap(type) {
 }
 setBasemap('light');
 
-function getColor(scans, dark) {
-  if (scans === 0) return dark ? '#555' : '#ccc';
-  if (scans < 5)   return '#81c784';
-  if (scans < 20)  return '#43a047';
-  if (scans < 50)  return '#2e7d32';
-  if (scans < 100) return '#1b5e20';
-  if (scans < 300) return '#1565c0';
-  return '#0d47a1';
+function getColor(norm, dark) {
+  if (norm === 0) return dark ? '#475569' : '#cbd5e1';
+  // Smooth gradient: light cyan → teal → blue → deep navy
+  const stops = [
+    [0.0,  [165, 243, 252]],
+    [0.25, [ 34, 211, 238]],
+    [0.5,  [  8, 145, 178]],
+    [0.75, [ 29,  78, 216]],
+    [1.0,  [ 30,  27,  75]]
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0, c0] = stops[i], [t1, c1] = stops[i + 1];
+    if (norm <= t1) {
+      const t = (norm - t0) / (t1 - t0);
+      return '#' + [0,1,2].map(j => Math.round(c0[j] + (c1[j] - c0[j]) * t).toString(16).padStart(2,'0')).join('');
+    }
+  }
+  return '#1e1b4b';
 }
-function getRadius(scans) {
-  return scans === 0 ? 5 : Math.max(6, Math.min(32, 6 + Math.sqrt(scans) * 1.6));
+function getRadius(norm) {
+  return norm === 0 ? 5 : Math.round(7 + norm * 25);
 }
 
 function dateStr(d) { return d.toISOString().slice(0,10); }
@@ -358,6 +368,9 @@ function renderMarkers() {
   if (heatLabelsLayer) { map.removeLayer(heatLabelsLayer); heatLabelsLayer = null; }
   let visible = 0, totalScans = 0, activeCount = 0;
 
+  const allCounts = currentData.filter(c => c.lat && c.lon).map(c => getScanCount(c, currentRange));
+  const maxScans = Math.max(...allCounts, 1);
+
   currentData.forEach(court => {
     if (!court.lat || !court.lon) return;
     const scans = getScanCount(court, currentRange);
@@ -365,10 +378,11 @@ function renderMarkers() {
     totalScans += scans;
     if (scans > 0) activeCount++;
 
+    const norm = scans === 0 ? 0 : Math.sqrt(scans) / Math.sqrt(maxScans);
     const isSF = court.source && court.source.includes('Salesforce');
     const circle = L.circleMarker([court.lat, court.lon], {
-      radius: getRadius(scans),
-      fillColor: getColor(scans, isDark),
+      radius: getRadius(norm),
+      fillColor: getColor(norm, isDark),
       color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
       weight: isSF ? 1.5 : 2.5,
       opacity: 1,
@@ -434,16 +448,20 @@ function updateLegend() {
       </div>
     `;
   } else {
+    const allCounts = currentData.filter(c => c.lat && c.lon).map(c => getScanCount(c, currentRange));
+    const maxScans = Math.max(...allCounts, 1);
     legendDiv.innerHTML = `
       <h4>QR Scans</h4>
-      <div class="legend-row"><span class="legend-dot" style="width:10px;height:10px;background:#ccc"></span>0</div>
-      <div class="legend-row"><span class="legend-dot" style="width:12px;height:12px;background:#81c784"></span>1–4</div>
-      <div class="legend-row"><span class="legend-dot" style="width:14px;height:14px;background:#43a047"></span>5–19</div>
-      <div class="legend-row"><span class="legend-dot" style="width:18px;height:18px;background:#2e7d32"></span>20–49</div>
-      <div class="legend-row"><span class="legend-dot" style="width:22px;height:22px;background:#1b5e20"></span>50–99</div>
-      <div class="legend-row"><span class="legend-dot" style="width:26px;height:26px;background:#1565c0"></span>100–299</div>
-      <div class="legend-row"><span class="legend-dot" style="width:30px;height:30px;background:#0d47a1"></span>300+</div>
-      <div style="margin-top:8px;padding-top:6px;border-top:1px solid #eee;font-size:0.68rem;color:#888">
+      <div style="display:flex;align-items:center;gap:6px;margin:6px 0 2px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:#cbd5e1;flex-shrink:0;border:1px solid rgba(0,0,0,0.1)"></div>
+        <span style="font-size:0.7rem;color:#64748b">0 scans</span>
+      </div>
+      <div style="width:100%;height:12px;border-radius:4px;margin:6px 0 2px;background:linear-gradient(to right,#a5f3fc,#22d3ee,#0891b2,#1d4ed8,#1e1b4b)"></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#888;margin-bottom:4px;">
+        <span>Low</span><span>High (${maxScans.toLocaleString()})</span>
+      </div>
+      <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:2px;">Scale relative to current filter</div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #eee;font-size:0.68rem;color:#888">
         Solid border = Salesforce coords<br>Dashed border = needs verification
       </div>
     `;
