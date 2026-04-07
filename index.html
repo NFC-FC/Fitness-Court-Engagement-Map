@@ -332,9 +332,9 @@ function fmtName(raw) {
 function courtPopupHTML(court) {
   const locName = fmtName(court.name);
   const scans = getScanCount(court, currentRange);
-  const isSF = court.source === 'salesforce';
+  const isSF = court.source && court.source.toLowerCase().includes('salesforce');
   const srcBadge = isSF
-    ? '<span class="coord-source coord-sf">✓ Salesforce coords</span>'
+    ? ''
     : '<span class="coord-source coord-geo">⚠ Coords need verification</span>';
   return `<div class="court-popup">
     <h3>${locName}</h3>
