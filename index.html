@@ -243,6 +243,8 @@ const COURTS = [{"id": 9813864, "name": "QR-CA-DublinUSD-YorkAlternativeLearning
 // ── Apps Script Web App URL ───────────────────────────────────────────────────
 // Paste your deployment URL here after deploying from Apps Script:
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzOuzlz5sf3nqyUtfl0tSLbduSJ2Esxz4hzpqeHjtaodVC7d1FDoEXDuBJ55sbbN0o/exec';
+const SUPABASE_URL     = 'https://ypjatmjcehoamdbtyatj.supabase.co';
+const SUPABASE_ANON    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwamF0bWpjZWhvYW1kYnR5YXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NjU1OTMsImV4cCI6MjA5MDE0MTU5M30.8ONqxo3zDtGh3r89U99N4joIwEUEke_3OByQH7Ul2Ts';
 
 // ── Basemaps ──────────────────────────────────────────────────────────────────
 const TILES = {
@@ -509,6 +511,35 @@ async function loadFromSheet(isRefresh) {
 
 function refreshFromSheet() { loadFromSheet(true); }
 
+async function loadDailyFromSupabase() {
+  try {
+    const resp = await fetch(
+      SUPABASE_URL + '/rest/v1/scan_logs?select=qr_id,scan_date&limit=50000',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!resp.ok) { console.warn('Supabase fetch failed:', resp.status); return; }
+    const rows = await resp.json();
+
+    const dailyMap = {};
+    rows.forEach(row => {
+      const id   = String(row.qr_id);
+      const date = String(row.scan_date).slice(0, 10);
+      if (!dailyMap[id]) dailyMap[id] = {};
+      dailyMap[id][date] = (dailyMap[id][date] || 0) + 1;
+    });
+
+    currentData = currentData.map(c => ({
+      ...c,
+      daily: dailyMap[String(c.id)] || c.daily || {}
+    }));
+
+    renderMarkers();
+    console.log('Supabase daily loaded:', rows.length, 'scan events');
+  } catch(e) {
+    console.error('Supabase daily load error:', e);
+  }
+}
+
 function openSourceModal() {
   const unverified = currentData.filter(c => c.source !== 'salesforce').length;
   const el = document.getElementById('modal-unverified-count');
@@ -684,6 +715,7 @@ function updateSidebar(filterCity) {
 }
 
 /// On page load: pull from sheet automatically if URL is set, else use baked-in data
+loadDailyFromSupabase();
 loadFromSheet(false);
 </script>
 
