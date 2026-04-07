@@ -255,8 +255,7 @@ let tileLayer = null, isDark = false, currentRange = 'all', currentViz = 'bubble
 let heatLayer = null, heatLabelsLayer = null;
 let customFrom = null, customTo = null;
 let currentData = JSON.parse(JSON.stringify(COURTS));
-// Clear all pre-loaded CSV daily data — date ranges use live Uniqode data only
-currentData.forEach(c => { c.daily = {}; });
+// Baked-in daily data is the fallback; loadFromSheet will override with live Supabase data
 
 const map = L.map('map', { center: [38.5, -98.0], zoom: 4 });
 const markersLayer = L.layerGroup().addTo(map);
@@ -499,10 +498,11 @@ async function loadFromSheet(isRefresh) {
       setTimeout(() => { btn.innerHTML = '↻ Refresh Scans'; btn.disabled = false; }, 2500);
     }
   } catch(e) {
-    console.log('Could not reach sheet — showing snapshot');
+    console.log('Could not reach sheet — falling back to baked-in data');
+    currentData = JSON.parse(JSON.stringify(COURTS));
     btn.innerHTML = '↻ Refresh Scans';
     btn.disabled = false;
-    renderMarkers(); // fall back to baked-in data
+    renderMarkers();
     console.error('Sheet load error:', e);
   }
 }
