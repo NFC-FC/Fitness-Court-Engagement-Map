@@ -393,7 +393,7 @@ function renderMarkers() {
     const counts = currentData.filter(c => c.lat && c.lon).map(c => getScanCount(c, currentRange));
     const rawMax = Math.max(...counts, 1);
     const points = currentData
-      .filter(c => c.lat && c.lon)
+      .filter(c => c.lat && c.lon && getScanCount(c, currentRange) > 0)
       .map(c => [c.lat, c.lon, getScanCount(c, currentRange)]);
     heatLayer = L.heatLayer(points, heatParams(map.getZoom(), rawMax)).addTo(map);
     updateHeatLabels();
@@ -574,11 +574,11 @@ function updateHeatLabels() {
     if (!c.lat || !c.lon) return;
     const scans = getScanCount(c, currentRange);
     const norm = scans === 0 ? 0 : Math.sqrt(scans) / Math.sqrt(maxScans);
-    const dotRadius = scans === 0 ? 3 : Math.round(4 + norm * 8);
+    const dotRadius = scans === 0 ? 3 : Math.round(4 + norm * 6);
     const label = c.location || c.name || '';
     L.circleMarker([c.lat, c.lon], {
-      radius: dotRadius, color: 'white', fillColor: 'white',
-      fillOpacity: scans === 0 ? 0.4 : 0.9, weight: 1.5, opacity: 1
+      radius: dotRadius, color: 'white', fillColor: 'transparent',
+      fillOpacity: 0, weight: scans === 0 ? 1 : 2, opacity: scans === 0 ? 0.3 : 0.85
     }).bindTooltip(label, {
       permanent: true, direction: 'top', offset: [0, -dotRadius - 2],
       className: 'heat-label'
