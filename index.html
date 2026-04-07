@@ -407,10 +407,10 @@ function heatParams(zoom, rawMax) {
   else if (zoom <= 9)  { radius = 28; blur = 16; }
   else if (zoom <= 11) { radius = 35; blur = 20; }
   else                 { radius = 45; blur = 25; }
-  // max = rawMax so only the highest-scan court hits full intensity;
-  // lower courts scale proportionally — reacts correctly to date filter changes
-  return { radius, blur, max: rawMax, minOpacity: 0.05,
-    gradient: {0.0:'rgba(255,255,178,0)', 0.15:'#ffffb2', 0.35:'#fd8d3c', 0.6:'#f03b20', 0.8:'#bd0026', 1.0:'#2d004b'} };
+  // max set to 40% of rawMax so mid-range courts land in the orange/red zone;
+  // top courts clamp to full intensity (dark purple); minOpacity keeps low courts visible
+  return { radius, blur, max: rawMax * 0.4, minOpacity: 0.3,
+    gradient: {0.0:'#ffffb2', 0.25:'#fd8d3c', 0.5:'#f03b20', 0.75:'#bd0026', 1.0:'#2d004b'} };
 }
 
 // ── Legend ────────────────────────────────────────────────────────────────────
