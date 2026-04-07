@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -143,6 +144,21 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; over
 .drill-name { font-size: 0.75rem; color: #475569; flex: 1; min-width: 0; font-weight: 400; }
 .drill-scans { font-size: 0.75rem; font-weight: 600; color: #334155; flex-shrink: 0; }
 #sidebar-overlay { display: none; }
+/* ── View toggle tabs ── */
+.view-tab { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); color:rgba(255,255,255,0.85); border-radius:6px; padding:5px 14px; font-size:0.72rem; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; letter-spacing:0.01em; transition:all 0.15s; }
+.view-tab.active { background:white; color:#0891b2; border-color:white; }
+/* ── Analytics panel ── */
+#analytics-panel { display:none; height:calc(100vh - 132px); overflow-y:auto; background:#f1f5f9; padding:20px 24px 32px; box-sizing:border-box; }
+.insight-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+.insight-card { background:white; border-radius:12px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.07); border:1px solid #e2e8f0; }
+.insight-val { font-size:1.75rem; font-weight:700; color:#0891b2; letter-spacing:-0.03em; line-height:1.1; }
+.insight-label { font-size:0.62rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.07em; font-weight:500; margin-top:4px; }
+.insight-sub { font-size:0.75rem; color:#64748b; margin-top:6px; font-weight:500; }
+.charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.chart-card { background:white; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.07); border:1px solid #e2e8f0; }
+.chart-card.full { grid-column:1/-1; }
+.chart-title { font-size:0.78rem; font-weight:600; color:#334155; letter-spacing:-0.01em; margin-bottom:14px; }
+.chart-subtitle { font-size:0.65rem; color:#94a3b8; font-weight:400; margin-left:6px; }
 </style>
 </head>
 <body>
@@ -153,6 +169,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; over
     <h1>Fitness Court Engagement Map</h1>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;gap:5px;margin-right:4px;">
+      <button class="view-tab active" id="tab-map" onclick="setView('map')">Map</button>
+      <button class="view-tab" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
+    </div>
     <div id="header-date" style="font-size:0.68rem;opacity:0.75;font-family:'Inter',sans-serif;font-weight:400;letter-spacing:0.01em;"></div>
     <script>document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});</script>
     <button id="refresh-btn" onclick="refreshFromSheet()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.45);color:white;border-radius:6px;padding:5px 14px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:0.01em;">&#8635; Refresh Scans</button>
@@ -215,6 +235,33 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; over
   </div>
 </div>
 
+<div id="analytics-panel">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+    <span style="font-size:0.72rem;font-weight:600;color:#475569;letter-spacing:0.03em;text-transform:uppercase;">Filter by City</span>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input id="analytics-city-input" type="text" placeholder="e.g. San Francisco…"
+        style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 11px;font-size:0.72rem;font-family:'Inter',sans-serif;width:200px;outline:none;color:#0f172a;"
+        oninput="analyticsCity=this.value.trim();renderAnalytics()">
+      <button onclick="document.getElementById('analytics-city-input').value='';analyticsCity='';renderAnalytics();"
+        style="background:#f1f5f9;color:#64748b;border:none;border-radius:6px;padding:6px 10px;font-size:0.72rem;cursor:pointer;font-family:'Inter',sans-serif;">Clear</button>
+    </div>
+    <span id="analytics-city-label" style="font-size:0.72rem;color:#0891b2;font-weight:500;"></span>
+  </div>
+  <div class="insight-row">
+    <div class="insight-card"><div class="insight-val" id="ai-total">—</div><div class="insight-label">Total Scans</div><div class="insight-sub" id="ai-total-sub"></div></div>
+    <div class="insight-card"><div class="insight-val" id="ai-peak-val">—</div><div class="insight-label">Peak Day</div><div class="insight-sub" id="ai-peak-sub"></div></div>
+    <div class="insight-card"><div class="insight-val" id="ai-court-val">—</div><div class="insight-label">Top Location</div><div class="insight-sub" id="ai-court-sub"></div></div>
+    <div class="insight-card"><div class="insight-val" id="ai-avg-val">—</div><div class="insight-label">Avg Scans / Day</div><div class="insight-sub" id="ai-avg-sub"></div></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card full"><div class="chart-title">Scans Over Time <span class="chart-subtitle">daily</span></div><canvas id="chart-daily" height="80"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Day of Week</div><canvas id="chart-dow" height="180"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Top Locations</div><canvas id="chart-courts" height="180"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Scans by State</div><canvas id="chart-states" height="180"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Weekly Totals</div><canvas id="chart-weekly" height="180"></canvas></div>
+  </div>
+</div>
+
 <div id="page-body">
 <div id="sidebar">
   <div id="sidebar-header">
@@ -255,6 +302,8 @@ const TILES = {
 };
 
 let tileLayer = null, isDark = false, currentRange = 'all', currentViz = 'bubble';
+let scanLogs = []; // raw rows from Supabase: {qr_id, scan_date, created_at}
+let activeCharts = {};
 let heatLayer = null, heatLabelsLayer = null;
 let customFrom = null, customTo = null;
 let currentData = JSON.parse(JSON.stringify(COURTS));
@@ -519,7 +568,7 @@ async function loadDailyFromSupabase() {
     let allRows = [], from = 0;
     while (true) {
       const resp = await fetch(
-        SUPABASE_URL + '/rest/v1/scan_logs?select=qr_id,scan_date&order=id.asc',
+        SUPABASE_URL + '/rest/v1/scan_logs?select=qr_id,scan_date,created_at&order=id.asc',
         { headers: {
             'apikey': SUPABASE_ANON,
             'Authorization': 'Bearer ' + SUPABASE_ANON,
@@ -547,6 +596,7 @@ async function loadDailyFromSupabase() {
       daily: dailyMap[String(c.id)] || c.daily || {}
     }));
 
+    scanLogs = allRows; // store for analytics
     renderMarkers();
     console.log('Supabase daily loaded:', allRows.length, 'total scan events');
   } catch(e) {
@@ -734,6 +784,243 @@ function updateSidebar(filterCity) {
 }
 
 /// On page load: pull from sheet automatically if URL is set, else use baked-in data
+// ── Analytics view ────────────────────────────────────────────────────────────
+
+let analyticsCity = '';
+
+function setView(view) {
+  const isAnalytics = view === 'analytics';
+  document.getElementById('page-body').style.display       = isAnalytics ? 'none' : 'flex';
+  document.getElementById('analytics-panel').style.display = isAnalytics ? 'block' : 'none';
+  document.getElementById('tab-map').classList.toggle('active', !isAnalytics);
+  document.getElementById('tab-analytics').classList.toggle('active', isAnalytics);
+  if (isAnalytics) renderAnalytics();
+}
+
+function filterScanLogsForRange(range) {
+  // Only include rows from known Fitness Court QR IDs
+  const fcIds = new Set(COURTS.map(c => String(c.id)));
+
+  // If city filter active, restrict to courts in that city
+  let allowedIds = fcIds;
+  if (analyticsCity) {
+    const q = analyticsCity.toLowerCase();
+    allowedIds = new Set(
+      COURTS
+        .filter(c => (c.city||'').toLowerCase().includes(q) ||
+                     (c.state||'').toLowerCase().includes(q) ||
+                     (c.location||'').toLowerCase().includes(q))
+        .map(c => String(c.id))
+    );
+  }
+
+  const todayStr = dateStr(new Date());
+  return scanLogs.filter(r => {
+    if (!allowedIds.has(String(r.qr_id))) return false;
+    const d = r.scan_date;
+    switch(range) {
+      case 'all':       return true;
+      case 'today':     return d === todayStr;
+      case 'yesterday': { const y = new Date(); y.setDate(y.getDate()-1); return d === dateStr(y); }
+      case '7days':     { const c = new Date(); c.setDate(c.getDate()-6); return d >= dateStr(c); }
+      case '30days':    { const c = new Date(); c.setDate(c.getDate()-29); return d >= dateStr(c); }
+      case 'year':      return d.startsWith(new Date().getFullYear().toString());
+      case 'custom':    return customFrom && customTo && d >= customFrom && d <= customTo;
+      default:          return true;
+    }
+  });
+}
+
+// Build a court lookup: id → court object
+function courtById(id) {
+  return COURTS.find(c => String(c.id) === String(id));
+}
+
+function renderAnalytics() {
+  const logs = filterScanLogsForRange(currentRange);
+
+  // ── Insight cards ──────────────────────────────────────────────────
+  const total = logs.length;
+
+  // Peak day
+  const byDate = {};
+  logs.forEach(r => { byDate[r.scan_date] = (byDate[r.scan_date] || 0) + 1; });
+  const peakEntry = Object.entries(byDate).sort((a,b) => b[1]-a[1])[0];
+  const peakDate  = peakEntry ? new Date(peakEntry[0]+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+  const peakCount = peakEntry ? peakEntry[1] : 0;
+
+  // Top court
+  const byCourt = {};
+  logs.forEach(r => { byCourt[r.qr_id] = (byCourt[r.qr_id] || 0) + 1; });
+  const topCourtEntry = Object.entries(byCourt).sort((a,b) => b[1]-a[1])[0];
+  const topCourtObj   = topCourtEntry ? courtById(topCourtEntry[0]) : null;
+  const topCourtName  = topCourtObj ? (topCourtObj.location || topCourtObj.name) : (topCourtEntry ? topCourtEntry[0] : '—');
+  const topCourtCity  = topCourtObj ? `${topCourtObj.city}, ${topCourtObj.state}` : '';
+  const topCourtCount = topCourtEntry ? topCourtEntry[1] : 0;
+
+  // Avg per day
+  const distinctDays = Object.keys(byDate).length || 1;
+  const avgPerDay = (total / distinctDays).toFixed(1);
+
+  // City label
+  const cityLabel = document.getElementById('analytics-city-label');
+  if (analyticsCity) {
+    const matchCount = COURTS.filter(c => (c.city||'').toLowerCase().includes(analyticsCity.toLowerCase()) || (c.state||'').toLowerCase().includes(analyticsCity.toLowerCase())).length;
+    cityLabel.textContent = `Showing ${matchCount} court${matchCount===1?'':'s'} matching "${analyticsCity}"`;
+  } else { cityLabel.textContent = ''; }
+
+  document.getElementById('ai-total').textContent     = total.toLocaleString();
+  document.getElementById('ai-total-sub').textContent  = `across ${Object.keys(byCourt).length} FC location${Object.keys(byCourt).length===1?'':'s'}`;
+  document.getElementById('ai-peak-val').textContent   = peakDate;
+  document.getElementById('ai-peak-sub').textContent   = peakCount ? `${peakCount} scans` : 'no data';
+  document.getElementById('ai-court-val').textContent  = topCourtName.length > 18 ? topCourtName.slice(0,16)+'…' : topCourtName;
+  document.getElementById('ai-court-sub').textContent  = topCourtCount ? `${topCourtCount} scans · ${topCourtCity}` : 'no data';
+  document.getElementById('ai-avg-val').textContent    = avgPerDay;
+  document.getElementById('ai-avg-sub').textContent    = `over ${distinctDays} active day${distinctDays===1?'':'s'}`;
+
+  // ── Charts ─────────────────────────────────────────────────────────
+  Object.values(activeCharts).forEach(c => c.destroy());
+  activeCharts = {};
+
+  const C = Chart.defaults;
+  C.font.family = "'Inter', -apple-system, sans-serif";
+  C.color = '#64748b';
+
+  const teal  = '#0891b2';
+  const navy  = '#1e3a5f';
+  const slate = '#94a3b8';
+  const colors = ['#0891b2','#0e7490','#155e75','#1d4ed8','#2563eb','#7c3aed','#9333ea','#c026d3','#db2777','#e11d48'];
+
+  // 1 — Daily trend (line chart) with crosshair
+  const sortedDates = Object.keys(byDate).sort();
+  const crosshairPlugin = {
+    id: 'crosshair',
+    afterDraw(chart) {
+      const active = chart.tooltip._active;
+      if (!active || !active.length) return;
+      const ctx = chart.ctx;
+      const x = active[0].element.x;
+      const { top, bottom } = chart.scales.y;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(8,145,178,0.45)';
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+  activeCharts.daily = new Chart(document.getElementById('chart-daily'), {
+    type: 'line',
+    data: {
+      labels: sortedDates.map(d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})),
+      datasets: [{ label:'Scans', data: sortedDates.map(d => byDate[d]),
+        borderColor: teal, backgroundColor: 'rgba(8,145,178,0.08)',
+        tension: 0.35, fill: true,
+        pointRadius: sortedDates.length > 60 ? 0 : 3,
+        pointHoverRadius: 6, pointHoverBackgroundColor: teal,
+        pointBackgroundColor: teal, borderWidth: 2 }]
+    },
+    plugins: [crosshairPlugin],
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'white',
+          titleColor: '#334155',
+          bodyColor: '#0891b2',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          padding: 12,
+          titleFont: { size: 12, weight: '600', family: "'Inter',sans-serif" },
+          bodyFont: { size: 13, weight: '700', family: "'Inter',sans-serif" },
+          callbacks: {
+            title: items => items[0].label,
+            label: item => ` ${item.raw} scan${item.raw === 1 ? '' : 's'}`
+          },
+          displayColors: false
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 12, font: { size: 10 } } },
+        y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, font: { size: 10 } }, beginAtZero: true }
+      }
+    }
+  });
+
+  // 2 — Day of week
+  const DOW_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const byDOW = new Array(7).fill(0);
+  logs.forEach(r => { byDOW[new Date(r.scan_date+'T12:00:00').getDay()]++; });
+  activeCharts.dow = new Chart(document.getElementById('chart-dow'), {
+    type: 'bar',
+    data: { labels: DOW_LABELS, datasets: [{ label:'Scans', data: byDOW,
+      backgroundColor: byDOW.map(v => v === Math.max(...byDOW) ? teal : 'rgba(8,145,178,0.25)'),
+      borderRadius: 5 }] },
+    options: { responsive:true, plugins:{ legend:{display:false} },
+      scales:{ x:{ grid:{display:false}, ticks:{font:{size:11}} },
+               y:{ grid:{color:'#f1f5f9'}, ticks:{stepSize:1, font:{size:10}}, beginAtZero:true } } }
+  });
+
+  // 3 — Top courts (horizontal bar)
+  const topCourts = Object.entries(byCourt)
+    .map(([id, cnt]) => { const c = courtById(id); return { name: c ? (c.location||c.name) : id, cnt }; })
+    .sort((a,b) => b.cnt-a.cnt).slice(0, 8);
+  activeCharts.courts = new Chart(document.getElementById('chart-courts'), {
+    type: 'bar',
+    data: { labels: topCourts.map(c => c.name.length>22 ? c.name.slice(0,20)+'…' : c.name),
+      datasets: [{ data: topCourts.map(c => c.cnt),
+        backgroundColor: colors.slice(0, topCourts.length), borderRadius: 4 }] },
+    options: { indexAxis:'y', responsive:true, plugins:{ legend:{display:false} },
+      scales:{ x:{ grid:{color:'#f1f5f9'}, ticks:{font:{size:10}}, beginAtZero:true },
+               y:{ grid:{display:false}, ticks:{font:{size:10}} } } }
+  });
+
+  // 4 — Scans by state
+  const byState = {};
+  logs.forEach(r => { const c = courtById(r.qr_id); if (c) byState[c.state] = (byState[c.state]||0)+1; });
+  const topStates = Object.entries(byState).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  activeCharts.states = new Chart(document.getElementById('chart-states'), {
+    type: 'bar',
+    data: { labels: topStates.map(s=>s[0]),
+      datasets: [{ data: topStates.map(s=>s[1]),
+        backgroundColor: colors.slice(0,topStates.length), borderRadius: 4 }] },
+    options: { indexAxis:'y', responsive:true, plugins:{ legend:{display:false} },
+      scales:{ x:{ grid:{color:'#f1f5f9'}, ticks:{font:{size:10}}, beginAtZero:true },
+               y:{ grid:{display:false}, ticks:{font:{size:11}} } } }
+  });
+
+  // 5 — Weekly totals
+  const byWeek = {};
+  logs.forEach(r => {
+    const d = new Date(r.scan_date+'T12:00:00');
+    const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay()+6)%7));
+    const key = dateStr(mon);
+    byWeek[key] = (byWeek[key]||0)+1;
+  });
+  const weekKeys = Object.keys(byWeek).sort().slice(-16);
+  activeCharts.weekly = new Chart(document.getElementById('chart-weekly'), {
+    type: 'bar',
+    data: { labels: weekKeys.map(d => 'Wk of '+new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})),
+      datasets: [{ label:'Scans', data: weekKeys.map(k=>byWeek[k]),
+        backgroundColor: 'rgba(8,145,178,0.75)', borderRadius: 4, hoverBackgroundColor: teal }] },
+    options: { responsive:true, plugins:{ legend:{display:false} },
+      scales:{ x:{ grid:{display:false}, ticks:{maxRotation:45, font:{size:9}} },
+               y:{ grid:{color:'#f1f5f9'}, ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+}
+
+// Re-render analytics when date range changes if in analytics view
+const _origSetDateRange = setDateRange;
+setDateRange = function(range) {
+  _origSetDateRange(range);
+  if (document.getElementById('analytics-panel').style.display !== 'none') renderAnalytics();
+};
+
 loadDailyFromSupabase();
 loadFromSheet(false);
 </script>
