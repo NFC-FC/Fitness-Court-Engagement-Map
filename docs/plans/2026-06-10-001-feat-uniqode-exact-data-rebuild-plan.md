@@ -1,7 +1,7 @@
 ---
 title: "feat: Rebuild Engagement Map on exact Uniqode data"
 type: feat
-status: active
+status: completed
 date: 2026-06-10
 ---
 
