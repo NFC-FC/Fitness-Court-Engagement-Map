@@ -17,6 +17,10 @@ import {
 } from './_lib.js';
 
 const RECONCILE_TOLERANCE = 2; // R11: delta ≤ 2 = matches Uniqode
+// Per-day webhook archive begins here. Codes created before this date have
+// official totals that legitimately include scans we have no event rows for —
+// that surplus is expected history, not drift.
+const ARCHIVE_START = '2025-06-04';
 
 export default async function handler(req, res) {
   try {
@@ -36,6 +40,7 @@ export default async function handler(req, res) {
         const computedAll = t.human_scans + t.bot_scans;
         const official = c.scans ?? 0;
         const delta = official - computedAll;
+        const preArchive = (c.created || '').slice(0, 10) < ARCHIVE_START;
         return {
           id: c.id,
           name: c.name,
@@ -51,7 +56,8 @@ export default async function handler(req, res) {
           officialScans: official,
           humanScans: t.human_scans,
           botScans: t.bot_scans,
-          reconciled: Math.abs(delta) <= RECONCILE_TOLERANCE,
+          reconciled: Math.abs(delta) <= RECONCILE_TOLERANCE || (preArchive && delta > 0),
+          preArchive,
           delta,
         };
       })

@@ -457,6 +457,7 @@ const RANGE_LABELS = {
   all: 'All Time', today: 'Today', yesterday: 'Yesterday', '7days': 'Last 7 Days',
   '30days': 'Last 30 Days', year: 'This Year', custom: 'Selected Range',
 };
+const RECON_TOL = 2; // mirrors the API's reconciliation tolerance (R11)
 
 /* ═════════════════════════════ Scan counting ═══════════════════════════ */
 function countFor(court, bounds) {
@@ -592,9 +593,11 @@ function renderKPIs() {
 }
 
 function popupHTML(court, count) {
-  const recon = court.reconciled
-    ? '<span class="recon ok">✓ Matches Uniqode</span>'
-    : `<span class="recon warn">⚠ Drift: ${court.delta > 0 ? '+' : ''}${court.delta} vs Uniqode</span>`;
+  const recon = !court.reconciled
+    ? `<span class="recon warn">⚠ Drift: ${court.delta > 0 ? '+' : ''}${court.delta} vs Uniqode</span>`
+    : court.preArchive && court.delta > RECON_TOL
+      ? `<span class="recon ok" title="This code predates per-day tracking (June 2025); Uniqode's official total includes ${court.delta.toLocaleString()} earlier scans.">✓ Matches Uniqode · incl. ${court.delta.toLocaleString()} pre-Jun 2025 scans</span>`
+      : '<span class="recon ok">✓ Matches Uniqode</span>';
   return `<div class="court-popup">
     <h3>${court.location}</h3>
     <div class="city">📍 ${court.city}${court.state ? ', ' + court.state : ''}</div>
