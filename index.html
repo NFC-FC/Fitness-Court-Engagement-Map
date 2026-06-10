@@ -212,6 +212,13 @@ header {
 .confirm-form .hint { font-size: 0.66rem; color: var(--text-3); }
 .popup-confirm input { font-size: 0.72rem; border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; width: 100%; margin-top: 4px; }
 .popup-confirm button { font-size: 0.7rem; font-weight: 700; background: var(--blue); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; margin-top: 6px; cursor: pointer; }
+.popup-toggle { font-size: 0.68rem; font-weight: 700; color: var(--blue); background: #eef3fd; border: none; border-radius: 6px; padding: 4px 9px; margin-top: 8px; cursor: pointer; }
+.popup-toggle.subtle { background: none; color: var(--text-3); font-weight: 600; padding: 2px 0; }
+.popup-toggle.subtle:hover { color: var(--blue); }
+.top3 .row { cursor: pointer; }
+.top3 .row:hover { background: #f6f9fd; }
+.list-table tr.total-row td { font-weight: 800; border-top: 2px solid var(--border); background: #f8fafd; }
+.list-table tr.total-row { cursor: default !important; }
 
 /* Loading / error */
 .overlay { position: fixed; inset: 0; background: rgba(238,241,247,0.92); z-index: 3000; display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; }
@@ -700,13 +707,19 @@ function popupHTML(court, count) {
     : court.preArchive && court.delta > RECON_TOL
       ? `<span class="recon ok" title="This code predates per-day tracking (June 2025); Uniqode's official total includes ${court.delta.toLocaleString()} earlier scans.">✓ Matches Uniqode · incl. ${court.delta.toLocaleString()} pre-Jun 2025 scans</span>`
       : '<span class="recon ok">✓ Matches Uniqode</span>';
-  const approxBlock = court.locationStatus !== 'approx' ? '' : `
-    <span class="recon warn">≈ Approximate — placed from its name</span>
-    <div class="popup-confirm">
+  // Location editing is tucked behind a small affordance so popups stay clean:
+  // approx courts get a "Confirm location ▾" button; verified courts a subtle
+  // "✎ edit location" link. Both reveal the same lat/lon + address form.
+  const form = `
+    <div class="popup-confirm" id="pcf-${court.id}" style="display:none">
       <input id="pc-latlon-${court.id}" placeholder="Exact lat, lon (e.g. 37.80614, -122.43512)">
       <input id="pc-addr-${court.id}" placeholder="…or street address">
-      <button onclick="confirmFromPopup(${court.id})">Confirm exact location</button>
+      <button onclick="confirmFromPopup(${court.id})">Save exact location</button>
     </div>`;
+  const approxBlock = court.locationStatus === 'approx'
+    ? `<div><span class="recon warn">≈ Approximate</span>
+       <button class="popup-toggle" onclick="togglePopupForm(${court.id})">Confirm location ▾</button></div>${form}`
+    : `<div><button class="popup-toggle subtle" onclick="togglePopupForm(${court.id})">✎ edit location</button></div>${form}`;
   return `<div class="court-popup">
     <h3>${court.location}</h3>
     <div class="city">📍 ${court.city}${court.state ? ', ' + court.state : ''}</div>
@@ -819,7 +832,7 @@ function renderRankings() {
     .sort((a, b) => b.n - a.n);
 
   document.getElementById('top3').innerHTML = ranked.slice(0, 3).map((r, i) => `
-    <div class="row">
+    <div class="row" onclick="focusCourt(${r.c.id})">
       <div class="rank-badge">${i + 1}</div>
       <div><div class="row-name">${r.c.location}</div><div class="row-sub">${r.c.city}${r.c.state ? ', ' + r.c.state : ''}</div></div>
       <div class="row-val"><b>${r.n.toLocaleString()}</b><span>SCANS</span></div>
@@ -932,6 +945,10 @@ function submitConfirm(id) {
   if (!(lat && lon) && !address) { alert('Enter lat + lon, or an address.'); return; }
   postConfirm(id, lat && lon ? { lat: +lat, lon: +lon, address: address || undefined } : { address },
     document.getElementById('cf-btn-' + id));
+}
+function togglePopupForm(id) {
+  const el = document.getElementById('pcf-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 function confirmFromPopup(id) {
   const pair = (document.getElementById('pc-latlon-' + id)?.value || '').trim();
@@ -1071,6 +1088,7 @@ function renderList() {
   const badge = { verified: '<span class="loc-badge verified">✓ Verified</span>',
                   approx: '<span class="loc-badge approx">≈ Approximate</span>',
                   missing: '<span class="loc-badge missing">No location</span>' };
+  const totalScans = rows.reduce((s, r) => s + r.scans, 0);
   document.getElementById('list-body').innerHTML = rows.map((r) => `
     <tr onclick="focusCourt(${r.c.id})">
       <td><b>${r.c.location}</b></td>
@@ -1078,7 +1096,14 @@ function renderList() {
       <td>${r.c.state || '—'}</td>
       <td class="num">${r.scans.toLocaleString()}</td>
       <td>${badge[r.status]}</td>
-    </tr>`).join('');
+    </tr>`).join('') + `
+    <tr class="total-row">
+      <td>Total</td>
+      <td>${rows.length} locations</td>
+      <td>${state.stateFilter || 'All states'}</td>
+      <td class="num">${totalScans.toLocaleString()}</td>
+      <td></td>
+    </tr>`;
   document.getElementById('mode-line-3').textContent =
     `${rows.length} locations · ${RANGE_LABELS[state.range]} · ${state.includeBots ? 'all scans (matches Uniqode)' : 'human scans only'}${state.stateFilter ? ' · ' + state.stateFilter : ''}`;
 }
