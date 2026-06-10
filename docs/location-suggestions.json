@@ -1,0 +1,114 @@
+[
+  {
+    "id": 11114265,
+    "name": "QR-SC-Sumter-USCSumter",
+    "suggestedLat": 33.920435,
+    "suggestedLon": -80.341469,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 11114269,
+    "name": "QR-IL-VillageOfGlenwood-GeorgeArquillaPark",
+    "suggestedLat": 41.542487,
+    "suggestedLon": -87.602277,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 11114280,
+    "name": "QR-PA-CharlestownTownship-CharlestownTownshipPark",
+    "suggestedLat": 40.085901,
+    "suggestedLon": -75.546086,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 11114292,
+    "name": "QR-TX-CityOfLowryCrossing-CityPark",
+    "suggestedLat": 33.1343,
+    "suggestedLon": -96.6299,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 10909632,
+    "name": "QR-TX-McAllen-BillSchuppPark",
+    "suggestedLat": 26.2034,
+    "suggestedLon": -98.23,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 10783851,
+    "name": "QR-TX-CityofGoliad-WOakSt&NChiltonAve",
+    "suggestedLat": 28.646778,
+    "suggestedLon": -97.437955,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 10777642,
+    "name": "QR-PA-UrisnusCollege-UrisnusCollege",
+    "suggestedLat": 40.1773,
+    "suggestedLon": -75.454,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 10777635,
+    "name": "QR-IL-Fulton-2ndSt&9thAve",
+    "suggestedLat": 40.47143,
+    "suggestedLon": -90.184556,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 10669270,
+    "name": "QR-OK-ShawneePublicSchools-ShawneeHighSchool",
+    "suggestedLat": 35.3273,
+    "suggestedLon": -96.9253,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 9850291,
+    "name": "QR-MA-TownOfSomerset-TownHallCouncilOnAging",
+    "suggestedLat": 41.7718,
+    "suggestedLon": -71.1531,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 9781490,
+    "name": "QR-KS-ParkCity-ParkCentre",
+    "suggestedLat": 37.800012,
+    "suggestedLon": -97.318376,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 9164235,
+    "name": "QR-NY-MohonassenSchool-TrackandField",
+    "suggestedLat": 42.7868,
+    "suggestedLon": -73.9651,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 10955480,
+    "name": "QR-MS-WashingtonCounty-WashingtonCountyConventionCenter",
+    "suggestedLat": 33.262671,
+    "suggestedLon": -90.918355,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 11042495,
+    "name": "QR-OK-ClevelandPublic Schools-ClevelandPublicSchools",
+    "suggestedLat": 33.766278,
+    "suggestedLon": -90.720777,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 11033889,
+    "name": "QR-NV-LasVegas-EastLasVegasFamilyPark",
+    "suggestedLat": 36.152802,
+    "suggestedLon": -115.151751,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  },
+  {
+    "id": 11033908,
+    "name": "QR-NV-LasVegas-KelloggZaherSportsComplex",
+    "suggestedLat": 36.155699,
+    "suggestedLon": -115.139061,
+    "note": "previously geocoded — UNVERIFIED, confirm before adding to Uniqode"
+  }
+]
