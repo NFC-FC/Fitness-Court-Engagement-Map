@@ -46,8 +46,19 @@ select qr_id, scan_date_la, is_bot, count(*)::int as scans
 from public.scan_events_clean
 group by 1, 2, 3;
 
+-- Per-code totals split by bot flag (migration: engagement_map_scan_totals_view)
+create or replace view public.scan_totals as
+select
+  qr_id,
+  coalesce(sum(scans) filter (where not is_bot), 0)::int as human_scans,
+  coalesce(sum(scans) filter (where is_bot), 0)::int as bot_scans
+from public.scan_daily
+group by 1;
+
 -- Lock down: API gateway (service role) only — never the browser.
 revoke all on public.scan_events_clean from anon, authenticated;
 revoke all on public.scan_daily from anon, authenticated;
+revoke all on public.scan_totals from anon, authenticated;
 grant select on public.scan_events_clean to service_role;
 grant select on public.scan_daily to service_role;
+grant select on public.scan_totals to service_role;
