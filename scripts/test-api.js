@@ -59,7 +59,7 @@ check(
     summary.plotted + summary.needsLocation === summary.totalCourts
 );
 
-const scansResp = await fetch(`${base}/api/scans?from=2026-06-01&to=2026-06-09`);
+const scansResp = await fetch(`${base}/api/scans?from=2026-06-10&to=2026-06-10`);
 check('/api/scans returns 200', scansResp.status === 200, `got ${scansResp.status}`);
 const scansBody = await scansResp.json();
 check('scan days returned', Array.isArray(scansBody.days) && scansBody.days.length > 0);
