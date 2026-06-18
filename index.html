@@ -356,9 +356,9 @@ header {
         <input type="date" id="f-to" onchange="applyCustom()">
       </div>
     </div>
-    <div class="bots-pill" id="bots-pill" onclick="toggleBots()" title="Bot scans are identified by Uniqode (isBotScan). Including them matches the Uniqode dashboard totals.">
+    <div class="bots-pill on" id="bots-pill" onclick="toggleBots()" title="Bot scans are identified by Uniqode (isBotScan). Including them matches the Uniqode dashboard totals exactly; excluding them shows real human engagement only.">
       <span class="dot"></span>
-      <span id="bots-label">Bot scans: Excluded</span>
+      <span id="bots-label">Bot scans: Included (matches Uniqode)</span>
     </div>
   </div>
 
@@ -483,7 +483,7 @@ header {
     <h3>Scan counts</h3>
     <ul>
       <li>Each physical scan is counted once (Uniqode's webhook sends duplicate events; they are deduplicated).</li>
-      <li><b>Bot scans</b> (flagged by Uniqode as automated traffic) are <b>excluded by default</b>. Use the "Bot scans" pill to include them — that mode matches the Uniqode dashboard totals exactly.</li>
+      <li><b>Bot scans</b> (flagged by Uniqode as automated traffic) are <b>included by default</b>, so totals match the Uniqode dashboard exactly. Use the "Bot scans" pill to exclude them and see real human engagement only.</li>
       <li>Days are bucketed in Pacific time, matching the Uniqode dashboard.</li>
       <li>Per-day history begins June 4, 2025. All-time totals are exact from each code's creation.</li>
     </ul>
@@ -505,7 +505,7 @@ const state = {
   daily: new Map(),      // qr_id -> Map(date -> {human, bot})
   summary: null,
   lastSynced: null,
-  includeBots: false,    // DEFAULT: humans only (bots excluded)
+  includeBots: true,     // DEFAULT: include bots so totals match the Uniqode dashboard
   range: 'all',
   customFrom: null, customTo: null,
   viz: 'bubble',
