@@ -87,10 +87,23 @@ export function parseLocation(metadata) {
 }
 
 // Best-effort display parsing of the QR-{ST}-{City}-{Location} naming convention.
+// Regional batches like QR-TX-DFW-GrandPrairie-Tyre are split to their real
+// city (Grand Prairie) so each site ranks and plots individually.
 export function parseName(name) {
   const spaced = (s) =>
     s.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\s+/g, ' ').trim();
   const parts = name.split('-');
+  const noStateSuffix = (city, st) => city.replace(new RegExp('\\s*' + st + '$', 'i'), '').trim();
+  if (parts[0] === 'QR' && parts[2] === 'DFW' && parts.length >= 5) {
+    return {
+      state: parts[1],
+      city: noStateSuffix(spaced(parts[3]), parts[1]),
+      location: spaced(parts.slice(4).join(' ')),
+    };
+  }
+  if (parts.length === 3 && parts[0] === 'QR') {
+    return { state: parts[1], city: spaced(parts[2]), location: spaced(parts[2]) };
+  }
   if (parts.length >= 4 && parts[0] === 'QR') {
     return {
       state: parts[1],

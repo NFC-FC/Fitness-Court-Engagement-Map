@@ -167,6 +167,59 @@ header {
 .an-card .sub { font-size: 0.73rem; color: var(--text-3); margin-bottom: 12px; }
 .an-card canvas { max-height: 290px; }
 
+/* List view */
+.list-card { overflow-x: auto; }
+.list-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.list-table th {
+  text-align: left; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-2); padding: 12px 16px;
+  border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap;
+  position: sticky; top: 0; background: var(--card);
+}
+.list-table th:hover { color: var(--blue); }
+.list-table th .arrow { font-size: 0.62rem; margin-left: 4px; }
+.list-table td { padding: 11px 16px; border-bottom: 1px solid #f1f4fa; }
+.list-table tbody tr { cursor: pointer; }
+.list-table tbody tr:hover { background: #f6f9fd; }
+.list-table .num { font-weight: 800; text-align: right; }
+.loc-badge { font-size: 0.66rem; font-weight: 700; border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
+.loc-badge.verified { background: #e7f6ec; color: #15803d; }
+.loc-badge.approx { background: #fef3c7; color: #92400e; }
+.loc-badge.missing { background: #fee2e2; color: #991b1b; }
+
+/* City drilldown */
+.city-courts { display: none; padding: 2px 18px 6px 30px; }
+.city-row.open .city-courts { display: block; }
+.city-court { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 0.78rem; border-bottom: 1px dashed #edf1f8; }
+.city-court:last-child { border-bottom: none; }
+.city-court:hover .cc-name { color: var(--blue); }
+.cc-name { font-weight: 600; }
+.cc-status { font-size: 0.62rem; }
+.cc-scans { margin-left: auto; font-weight: 700; }
+.chev { margin-left: 6px; color: var(--text-3); font-size: 0.6rem; transition: transform 0.15s; display: inline-block; }
+.city-row.open .chev { transform: rotate(90deg); }
+
+/* Needs-location confirm form */
+.needs-row { cursor: pointer; }
+.needs-row:hover { background: #fdfaf2; }
+.needs-row .confirm-link { font-size: 0.7rem; font-weight: 700; color: var(--blue); margin-top: 3px; display: inline-block; }
+.confirm-form { display: none; margin-top: 8px; gap: 6px; flex-direction: column; }
+.confirm-form.open { display: flex; }
+.confirm-form input { font: inherit; font-size: 0.76rem; border: 1px solid var(--border); border-radius: 7px; padding: 6px 9px; width: 100%; }
+.confirm-form .row2 { display: flex; gap: 6px; }
+.confirm-form button { font: inherit; font-size: 0.74rem; font-weight: 700; background: var(--blue); color: #fff; border: none; border-radius: 7px; padding: 7px 0; cursor: pointer; }
+.confirm-form button:disabled { opacity: 0.5; }
+.confirm-form .hint { font-size: 0.66rem; color: var(--text-3); }
+.popup-confirm input { font-size: 0.72rem; border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; width: 100%; margin-top: 4px; }
+.popup-confirm button { font-size: 0.7rem; font-weight: 700; background: var(--blue); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; margin-top: 6px; cursor: pointer; }
+.popup-toggle { font-size: 0.68rem; font-weight: 700; color: var(--blue); background: #eef3fd; border: none; border-radius: 6px; padding: 4px 9px; margin-top: 8px; cursor: pointer; }
+.popup-toggle.subtle { background: none; color: var(--text-3); font-weight: 600; padding: 2px 0; }
+.popup-toggle.subtle:hover { color: var(--blue); }
+.top3 .row { cursor: pointer; }
+.top3 .row:hover { background: #f6f9fd; }
+.list-table tr.total-row td { font-weight: 800; border-top: 2px solid var(--border); background: #f8fafd; }
+.list-table tr.total-row { cursor: default !important; }
+
 /* Loading / error */
 .overlay { position: fixed; inset: 0; background: rgba(238,241,247,0.92); z-index: 3000; display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; }
 .spinner { width: 42px; height: 42px; border: 4px solid #d8e2f3; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.9s linear infinite; }
@@ -207,6 +260,7 @@ header {
   </div>
   <nav class="tabs">
     <button class="tab active" id="tab-map" onclick="setView('map')">Map</button>
+    <button class="tab" id="tab-list" onclick="setView('list')">List</button>
     <button class="tab" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
   </nav>
   <div class="hbtn" style="cursor:default">
@@ -234,7 +288,7 @@ header {
       <div class="kpi-icon" style="background:#e8effc;color:var(--blue)">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14h1v1h-1zM14 20h1v1h-1zM18 18h3v3h-3z"/></svg>
       </div>
-      <div><div class="kpi-num" style="color:var(--blue)" id="kpi-total">—</div><div class="kpi-label">Fitness Courts</div><div class="kpi-sub">Total Installed</div></div>
+      <div><div class="kpi-num" style="color:var(--blue)" id="kpi-total">—</div><div class="kpi-label">Fitness Courts</div><div class="kpi-sub">Total Unique QR Codes Installed</div></div>
     </div>
     <div class="card kpi">
       <div class="kpi-icon" style="background:#e7f6ec;color:var(--green)">
@@ -275,6 +329,12 @@ header {
         <option value="light">Light</option>
         <option value="dark">Dark</option>
         <option value="aerial">Aerial</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-state">State</label>
+      <select id="f-state" onchange="setStateFilter(this.value)">
+        <option value="">All States</option>
       </select>
     </div>
     <div class="field">
@@ -352,6 +412,29 @@ header {
     </div>
   </div>
 
+  <!-- LIST VIEW -->
+  <div id="view-list" style="display:none">
+    <div class="card list-card">
+      <table class="list-table">
+        <thead>
+          <tr>
+            <th onclick="setSort('location')">Court <span class="arrow" id="ar-location"></span></th>
+            <th onclick="setSort('city')">City <span class="arrow" id="ar-city"></span></th>
+            <th onclick="setSort('state')">State <span class="arrow" id="ar-state"></span></th>
+            <th onclick="setSort('scans')" style="text-align:right">Scans <span class="arrow" id="ar-scans"></span></th>
+            <th onclick="setSort('status')">Location <span class="arrow" id="ar-status"></span></th>
+          </tr>
+        </thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+    <div class="refreshed">
+      <span id="mode-line-3"></span>
+      <span class="sep">|</span>
+      <span>Click any column to sort · click a row to see it on the map</span>
+    </div>
+  </div>
+
   <!-- ANALYTICS VIEW -->
   <div id="view-analytics" style="display:none">
     <div class="an-grid">
@@ -406,8 +489,9 @@ header {
     </ul>
     <h3>Locations</h3>
     <ul>
-      <li>Courts are plotted only at exact coordinates stored in the code's Uniqode <b>Metadata</b> (<code>lat</code>, <code>lon</code>, optional <code>address</code>).</li>
-      <li>Codes without verified coordinates appear under <b>Needs Location Verification</b> — never plotted at a guess.</li>
+      <li><b>Solid markers</b> sit at exact coordinates stored in the code's Uniqode <b>Metadata</b> (<code>lat</code>, <code>lon</code>, optional <code>address</code>) — human-confirmed.</li>
+      <li><b>Dashed amber markers</b> are <b>approximate</b> — placed from the code's name (state/city/park) so nothing is invisible. Click one to confirm its exact location; that writes the coordinates into Uniqode and the marker turns solid.</li>
+      <li>Codes whose names couldn't be placed at all are listed under <b>Needs Location Verification</b> with a manual entry form.</li>
     </ul>
     <h3>Trust check</h3>
     <p>On every sync, each code's computed total is reconciled against Uniqode's official all-time count. The status dot at the bottom of the map turns amber if any code drifts by more than 2 scans.</p>
@@ -421,14 +505,16 @@ const state = {
   daily: new Map(),      // qr_id -> Map(date -> {human, bot})
   summary: null,
   lastSynced: null,
-  suggestions: new Map(),// qr_id -> {suggestedLat, suggestedLon}
   includeBots: false,    // DEFAULT: humans only (bots excluded)
   range: 'all',
   customFrom: null, customTo: null,
   viz: 'bubble',
   view: 'map',
   search: '',
+  stateFilter: '',
   allRankings: false,
+  openCities: new Set(),
+  sortKey: 'scans', sortDir: -1,
 };
 
 /* ═════════════════════════════ Date helpers ════════════════════════════ */
@@ -457,6 +543,7 @@ const RANGE_LABELS = {
   all: 'All Time', today: 'Today', yesterday: 'Yesterday', '7days': 'Last 7 Days',
   '30days': 'Last 30 Days', year: 'This Year', custom: 'Selected Range',
 };
+const RECON_TOL = 2; // mirrors the API's reconciliation tolerance (R11)
 
 /* ═════════════════════════════ Scan counting ═══════════════════════════ */
 function countFor(court, bounds) {
@@ -484,11 +571,9 @@ async function loadData(isRefresh) {
   document.getElementById('error-banner').style.display = 'none';
   try {
     const bust = isRefresh ? `?t=${Date.now()}` : '';
-    const join = isRefresh ? '&' : '?';
-    const [courtsResp, scansResp, suggResp] = await Promise.all([
+    const [courtsResp, scansResp] = await Promise.all([
       fetch(`/api/courts${bust}`),
       fetch(`/api/scans${bust}`),
-      fetch('docs/location-suggestions.json').catch(() => null),
     ]);
     if (!courtsResp.ok) throw new Error(`courts API ${courtsResp.status}`);
     if (!scansResp.ok) throw new Error(`scans API ${scansResp.status}`);
@@ -506,11 +591,7 @@ async function loadData(isRefresh) {
       m.set(d.date, { human: d.human, bot: d.bot });
     }
 
-    if (suggResp && suggResp.ok) {
-      const sugg = await suggResp.json();
-      state.suggestions = new Map(sugg.map((s) => [String(s.id), s]));
-    }
-
+    populateStateFilter();
     renderAll();
   } catch (err) {
     console.error('Load failed:', err);
@@ -562,14 +643,41 @@ function renderAll() {
   renderNeeds();
   renderFooter();
   if (state.view === 'analytics') renderAnalytics();
+  if (state.view === 'list') renderList();
+}
+
+function populateStateFilter() {
+  const sel = document.getElementById('f-state');
+  const current = state.stateFilter;
+  const states = [...new Set(state.courts.map((c) => c.state).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All States</option>' +
+    states.map((s) => {
+      const n = state.courts.filter((c) => c.state === s).length;
+      return `<option value="${s}"${s === current ? ' selected' : ''}>${s} (${n})</option>`;
+    }).join('');
+}
+function setStateFilter(s) {
+  state.stateFilter = s;
+  renderAll();
+  const plotted = visibleCourts().filter(plottable);
+  if (s && plotted.length && state.view === 'map') {
+    map.fitBounds(L.latLngBounds(plotted.map((c) => [c.lat, c.lon])).pad(0.25), { maxZoom: 10 });
+  } else if (!s && state.view === 'map') {
+    map.setView([38.5, -97.5], 4);
+  }
 }
 
 function visibleCourts() {
   const q = state.search.trim().toLowerCase();
-  if (!q) return state.courts;
-  return state.courts.filter((c) =>
+  let list = state.courts;
+  if (state.stateFilter) list = list.filter((c) => c.state === state.stateFilter);
+  if (q) list = list.filter((c) =>
     c.city.toLowerCase().includes(q) || c.state.toLowerCase().includes(q) || c.location.toLowerCase().includes(q));
+  return list;
 }
+// A court is plottable when it has any position — verified (exact metadata)
+// or approx (geocoded from its name, pending confirmation).
+function plottable(c) { return c.lat != null && c.lon != null; }
 
 function renderKPIs() {
   const bounds = rangeBounds();
@@ -584,48 +692,77 @@ function renderKPIs() {
   document.getElementById('kpi-active-sub').textContent =
     total ? `${Math.round((active / total) * 100)}% Active` : '—';
   document.getElementById('kpi-scans').textContent = scans.toLocaleString();
-  const needsN = courts.filter((c) => !c.hasLocation).length;
-  const needsScans = courts.filter((c) => !c.hasLocation).reduce((s, c) => s + countFor(c, bounds), 0);
+  const unplotted = courts.filter((c) => !plottable(c));
+  const unplottedScans = unplotted.reduce((s, c) => s + countFor(c, bounds), 0);
   document.getElementById('kpi-scans-sub').textContent =
-    RANGE_LABELS[state.range] + (needsScans ? ` — incl. ${needsScans.toLocaleString()} from ${needsN} codes awaiting location` : '');
-  document.getElementById('kpi-visible').textContent = plotted;
+    RANGE_LABELS[state.range] +
+    (state.stateFilter ? ` · ${state.stateFilter}` : '') +
+    (unplottedScans ? ` — incl. ${unplottedScans.toLocaleString()} from ${unplotted.length} unmapped codes` : '');
+  document.getElementById('kpi-visible').textContent = courts.filter(plottable).length;
 }
 
 function popupHTML(court, count) {
-  const recon = court.reconciled
-    ? '<span class="recon ok">✓ Matches Uniqode</span>'
-    : `<span class="recon warn">⚠ Drift: ${court.delta > 0 ? '+' : ''}${court.delta} vs Uniqode</span>`;
+  const recon = !court.reconciled
+    ? `<span class="recon warn">⚠ Drift: ${court.delta > 0 ? '+' : ''}${court.delta} vs Uniqode</span>`
+    : court.preArchive && court.delta > RECON_TOL
+      ? `<span class="recon ok" title="This code predates per-day tracking (June 2025); Uniqode's official total includes ${court.delta.toLocaleString()} earlier scans.">✓ Matches Uniqode · incl. ${court.delta.toLocaleString()} pre-Jun 2025 scans</span>`
+      : '<span class="recon ok">✓ Matches Uniqode</span>';
+  // Location editing is tucked behind a small affordance so popups stay clean:
+  // approx courts get a "Confirm location ▾" button; verified courts a subtle
+  // "✎ edit location" link. Both reveal the same lat/lon + address form.
+  const form = `
+    <div class="popup-confirm" id="pcf-${court.id}" style="display:none">
+      <input id="pc-latlon-${court.id}" placeholder="Exact lat, lon (e.g. 37.80614, -122.43512)">
+      <input id="pc-addr-${court.id}" placeholder="…or street address">
+      <button onclick="confirmFromPopup(${court.id})">Save exact location</button>
+    </div>`;
+  const approxBlock = court.locationStatus === 'approx'
+    ? `<div><span class="recon warn">≈ Approximate</span>
+       <button class="popup-toggle" onclick="togglePopupForm(${court.id})">Confirm location ▾</button></div>${form}`
+    : `<div><button class="popup-toggle subtle" onclick="togglePopupForm(${court.id})">✎ edit location</button></div>${form}`;
   return `<div class="court-popup">
     <h3>${court.location}</h3>
     <div class="city">📍 ${court.city}${court.state ? ', ' + court.state : ''}</div>
     ${court.address ? `<div class="address">${court.address}</div>` : ''}
     <div class="scan-count">${count.toLocaleString()}</div>
     <div class="scan-lbl">${RANGE_LABELS[state.range]} · ${state.includeBots ? 'all scans' : 'human scans'}</div>
-    ${recon}
+    ${recon}${approxBlock}
   </div>`;
 }
 
+let heatLayers = [];
+const openMarkers = new Map(); // court id -> marker, for zoom-and-open from panels
+
 function renderMap() {
   markersLayer.clearLayers();
-  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+  openMarkers.clear();
+  heatLayers.forEach((l) => map.removeLayer(l)); heatLayers = [];
   if (heatLabels) { map.removeLayer(heatLabels); heatLabels = null; }
   const bounds = rangeBounds();
-  const courts = visibleCourts().filter((c) => c.hasLocation);
+  const courts = visibleCourts().filter(plottable);
 
   if (state.viz === 'heat') {
     const counts = courts.map((c) => countFor(c, bounds));
     const maxN = Math.max(...counts, 1);
-    const pts = courts
-      .map((c, i) => [c.lat, c.lon, counts[i]])
-      .filter((p) => p[2] > 0);
-    if (pts.length) {
-      const zoom = map.getZoom();
-      const radius = zoom <= 5 ? 22 : zoom <= 7 ? 30 : zoom <= 9 ? 38 : 48;
-      heatLayer = L.heatLayer(pts, {
-        radius, blur: Math.round(radius * 0.55),
+    const zoom = map.getZoom();
+    const base = zoom <= 5 ? 22 : zoom <= 7 ? 30 : zoom <= 9 ? 38 : 48;
+    // Volume-scaled radius: hotter courts throw a bigger blob, in three tiers.
+    const tiers = [
+      { test: (n) => n / maxN < 0.15, radius: Math.round(base * 0.6) },
+      { test: (n) => n / maxN < 0.5,  radius: base },
+      { test: () => true,             radius: Math.round(base * 1.7) },
+    ];
+    for (const tier of tiers) {
+      const pts = courts
+        .map((c, i) => [c.lat, c.lon, counts[i]])
+        .filter((p, i) => counts[i] > 0 && tier.test(counts[i]) &&
+          !tiers.slice(0, tiers.indexOf(tier)).some((t) => t.test(counts[i])));
+      if (!pts.length) continue;
+      heatLayers.push(L.heatLayer(pts, {
+        radius: tier.radius, blur: Math.round(tier.radius * 0.55),
         max: Math.max(maxN * 0.4, 1), minOpacity: 0.35,
         gradient: { 0.0: '#ffffb2', 0.25: '#fd8d3c', 0.5: '#f03b20', 0.75: '#bd0026', 1.0: '#2d004b' },
-      }).addTo(map);
+      }).addTo(map));
     }
     if (map.getZoom() >= 7) {
       heatLabels = L.layerGroup().addTo(map);
@@ -634,7 +771,7 @@ function renderMap() {
           radius: counts[i] === 0 ? 3 : 5, color: '#fff', fillOpacity: 0,
           weight: counts[i] === 0 ? 1 : 2, opacity: counts[i] === 0 ? 0.35 : 0.9,
         }).bindTooltip(c.location, { permanent: true, direction: 'top', offset: [0, -8], className: 'heat-label' })
-          .bindPopup(popupHTML(c, counts[i]), { maxWidth: 250 })
+          .bindPopup(popupHTML(c, counts[i]), { maxWidth: 260 })
           .addTo(heatLabels);
       });
     }
@@ -642,15 +779,30 @@ function renderMap() {
     courts.forEach((c) => {
       const n = countFor(c, bounds);
       const b = bucketFor(n);
+      const approx = c.locationStatus === 'approx';
       const m = L.circleMarker([c.lat, c.lon], {
-        radius: b.r, fillColor: b.color,
-        color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(15,31,61,0.25)',
-        weight: 1.5, fillOpacity: n === 0 ? 0.45 : 0.85,
-      }).bindPopup(popupHTML(c, n), { maxWidth: 250 });
-      m.on('mouseover', function () { this.openPopup(); });
+        radius: b.r,
+        fillColor: approx ? '#f59e0b' : b.color,
+        color: approx ? '#b45309' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(15,31,61,0.25)'),
+        weight: approx ? 2 : 1.5,
+        dashArray: approx ? '4 3' : null,
+        fillOpacity: approx ? 0.35 : (n === 0 ? 0.45 : 0.85),
+      }).bindPopup(popupHTML(c, n), { maxWidth: 260 });
+      if (!approx) m.on('mouseover', function () { this.openPopup(); });
+      openMarkers.set(c.id, m);
       markersLayer.addLayer(m);
     });
   }
+}
+
+// Zoom to a court from any panel/list; opens its popup when it has a marker.
+function focusCourt(id) {
+  const c = state.courts.find((x) => x.id === id);
+  if (!c || !plottable(c)) return;
+  if (state.view !== 'map') setView('map');
+  map.setView([c.lat, c.lon], c.locationStatus === 'approx' ? 12 : 14);
+  const m = openMarkers.get(id);
+  if (m) setTimeout(() => m.openPopup(), 250);
 }
 
 function renderLegend() {
@@ -665,7 +817,10 @@ function renderLegend() {
       BUCKETS.map((b, i) => {
         const size = 9 + i * 2;
         return `<div class="legend-row"><span class="legend-dot" style="width:${size}px;height:${size}px;background:${b.color}"></span>${b.label}</div>`;
-      }).join('') + `</div>`;
+      }).join('') +
+      `<div class="legend-row" style="grid-column:1/-1;margin-top:4px;padding-top:6px;border-top:1px solid var(--border)">
+        <span class="legend-dot" style="width:12px;height:12px;background:rgba(245,158,11,0.35);border:2px dashed #b45309"></span>Approximate — needs verification
+      </div></div>`;
   }
 }
 
@@ -677,7 +832,7 @@ function renderRankings() {
     .sort((a, b) => b.n - a.n);
 
   document.getElementById('top3').innerHTML = ranked.slice(0, 3).map((r, i) => `
-    <div class="row">
+    <div class="row" onclick="focusCourt(${r.c.id})">
       <div class="rank-badge">${i + 1}</div>
       <div><div class="row-name">${r.c.location}</div><div class="row-sub">${r.c.city}${r.c.state ? ', ' + r.c.state : ''}</div></div>
       <div class="row-val"><b>${r.n.toLocaleString()}</b><span>SCANS</span></div>
@@ -687,35 +842,124 @@ function renderRankings() {
   for (const r of ranked) {
     const key = r.c.city + (r.c.state ? ', ' + r.c.state : '');
     let e = byCity.get(key);
-    if (!e) { e = { city: key, courts: 0, scans: 0, lat: r.c.lat, lon: r.c.lon }; byCity.set(key, e); }
-    e.courts++; e.scans += r.n;
-    if (e.lat == null && r.c.lat != null) { e.lat = r.c.lat; e.lon = r.c.lon; }
+    if (!e) { e = { city: key, courts: [], scans: 0 }; byCity.set(key, e); }
+    e.courts.push(r); e.scans += r.n;
   }
   const cities = [...byCity.values()].sort((a, b) => b.scans - a.scans);
   const maxScans = Math.max(...cities.map((c) => c.scans), 1);
-  const shown = state.allRankings ? cities : cities.slice(0, 8);
+  // When searching, show every matching city and auto-expand them so all
+  // their courts appear without an extra click.
+  const searching = state.search.trim().length > 0;
+  const shown = (state.allRankings || searching) ? cities : cities.slice(0, 8);
+  const isOpen = (key) => searching || state.openCities.has(key);
   document.getElementById('rankings-link').textContent = state.allRankings ? 'Show Top 8 →' : 'View All Rankings →';
-  document.getElementById('citylist').innerHTML = shown.map((c) => `
-    <div class="city-row" onclick="panTo(${c.lat}, ${c.lon})">
-      <div class="line1">
-        <span class="cname">${c.city}</span><span class="ccount">${c.courts} court${c.courts > 1 ? 's' : ''}</span>
-        <span class="cval">${c.scans.toLocaleString()}<span>SCANS</span></span>
+  const statusDot = (c) =>
+    c.locationStatus === 'verified' ? '' :
+    c.locationStatus === 'approx' ? '<span class="cc-status" title="Approximate location">≈</span>' :
+    '<span class="cc-status" title="No location yet">⚠</span>';
+  document.getElementById('citylist').innerHTML = shown.map((e) => `
+    <div class="city-row${isOpen(e.city) ? ' open' : ''}" id="city-${cssId(e.city)}">
+      <div class="line1" onclick="toggleCity('${e.city.replace(/'/g, "\\'")}')">
+        <span class="cname">${e.city}</span><span class="ccount">${e.courts.length} court${e.courts.length > 1 ? 's' : ''}<span class="chev">▶</span></span>
+        <span class="cval">${e.scans.toLocaleString()}<span>SCANS</span></span>
       </div>
-      <div class="bar"><i style="width:${Math.max((c.scans / maxScans) * 100, 2)}%"></i></div>
+      <div class="bar"><i style="width:${Math.max((e.scans / maxScans) * 100, 2)}%"></i></div>
+      <div class="city-courts">
+        ${e.courts.map((r) => `
+          <div class="city-court" onclick="focusCourt(${r.c.id})">
+            <span class="cc-name">${r.c.location}</span>${statusDot(r.c)}
+            <span class="cc-scans">${r.n.toLocaleString()}</span>
+          </div>`).join('')}
+      </div>
     </div>`).join('');
+}
+function cssId(s) { return s.replace(/[^a-z0-9]/gi, '-'); }
+function toggleCity(city) {
+  state.openCities.has(city) ? state.openCities.delete(city) : state.openCities.add(city);
+  document.getElementById('city-' + cssId(city))?.classList.toggle('open');
 }
 
 function renderNeeds() {
-  const needs = state.courts.filter((c) => !c.hasLocation);
+  const needs = state.courts.filter((c) => c.locationStatus !== 'verified');
   document.getElementById('needs-count').textContent = needs.length;
-  document.getElementById('needs-list').innerHTML = needs.map((c) => {
-    const s = state.suggestions.get(String(c.id));
-    return `<div class="needs-row">
-      <div class="n">${c.name}</div>
-      <div class="s">${countFor(c, null).toLocaleString()} scans all time${
-        s ? ` — suggested (unverified): ${s.suggestedLat}, ${s.suggestedLon}` : ''}</div>
-    </div>`;
-  }).join('');
+  document.getElementById('needs-list').innerHTML = needs.map((c) => `
+    <div class="needs-row" id="needs-${c.id}">
+      <div onclick="focusCourt(${c.id})">
+        <div class="n">${c.name}</div>
+        <div class="s">${countFor(c, null).toLocaleString()} scans all time — ${
+          c.locationStatus === 'approx'
+            ? `≈ placed approximately (${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}) · click to view`
+            : 'no location yet'}</div>
+      </div>
+      <span class="confirm-link" onclick="toggleConfirm(${c.id})">Add exact location ▾</span>
+      <div class="confirm-form" id="cf-${c.id}">
+        <div class="row2">
+          <input id="cf-lat-${c.id}" placeholder="lat (37.80614)">
+          <input id="cf-lon-${c.id}" placeholder="lon (-122.43512)">
+        </div>
+        <input id="cf-addr-${c.id}" placeholder="…or street address">
+        <button id="cf-btn-${c.id}" onclick="submitConfirm(${c.id})">Save confirmed location</button>
+        <div class="hint">Writes lat/lon into this code's Uniqode metadata — the source of truth.</div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleConfirm(id) {
+  document.getElementById('cf-' + id)?.classList.toggle('open');
+}
+
+/* ── Confirmed-location writes (admin-key gated) ── */
+function adminKey(forceAsk) {
+  let k = localStorage.getItem('nfc-admin-key');
+  if (!k || forceAsk) {
+    k = prompt('Enter the map admin key (set as ADMIN_KEY in Vercel):') || '';
+    if (k) localStorage.setItem('nfc-admin-key', k);
+  }
+  return k;
+}
+async function postConfirm(id, payload, btn) {
+  const key = adminKey(false);
+  if (!key) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const resp = await fetch('/api/confirm-location', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+      body: JSON.stringify({ id, ...payload }),
+    });
+    const body = await resp.json();
+    if (resp.status === 401) {
+      localStorage.removeItem('nfc-admin-key');
+      if (adminKey(true)) return postConfirm(id, payload, btn);
+      return;
+    }
+    if (!resp.ok) throw new Error(body.error || resp.status);
+    await loadData(true);
+    focusCourt(id);
+  } catch (err) {
+    alert('Could not save location: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save confirmed location'; }
+  }
+}
+function submitConfirm(id) {
+  const lat = document.getElementById('cf-lat-' + id).value.trim();
+  const lon = document.getElementById('cf-lon-' + id).value.trim();
+  const address = document.getElementById('cf-addr-' + id).value.trim();
+  if (!(lat && lon) && !address) { alert('Enter lat + lon, or an address.'); return; }
+  postConfirm(id, lat && lon ? { lat: +lat, lon: +lon, address: address || undefined } : { address },
+    document.getElementById('cf-btn-' + id));
+}
+function togglePopupForm(id) {
+  const el = document.getElementById('pcf-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function confirmFromPopup(id) {
+  const pair = (document.getElementById('pc-latlon-' + id)?.value || '').trim();
+  const address = (document.getElementById('pc-addr-' + id)?.value || '').trim();
+  const m = pair.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
+  if (!m && !address) { alert('Enter "lat, lon" or an address.'); return; }
+  postConfirm(id, m ? { lat: +m[1], lon: +m[2], address: address || undefined } : { address });
 }
 
 function renderFooter() {
@@ -811,14 +1055,61 @@ function renderAnalytics() {
 /* ═════════════════════════════ Interactions ════════════════════════════ */
 function setView(v) {
   state.view = v;
-  document.getElementById('tab-map').classList.toggle('active', v === 'map');
-  document.getElementById('tab-analytics').classList.toggle('active', v === 'analytics');
-  document.getElementById('view-map').style.display = v === 'map' ? '' : 'none';
-  document.getElementById('view-analytics').style.display = v === 'analytics' ? '' : 'none';
+  for (const t of ['map', 'list', 'analytics']) {
+    document.getElementById('tab-' + t).classList.toggle('active', v === t);
+    document.getElementById('view-' + t).style.display = v === t ? '' : 'none';
+  }
   document.getElementById('field-viz').style.display = v === 'map' ? '' : 'none';
   document.getElementById('field-basemap').style.display = v === 'map' ? '' : 'none';
   if (v === 'map') { map.invalidateSize(); renderMap(); }
+  else if (v === 'list') renderList();
   else renderAnalytics();
+}
+
+/* ── List view ── */
+function setSort(key) {
+  if (state.sortKey === key) state.sortDir = -state.sortDir;
+  else { state.sortKey = key; state.sortDir = key === 'scans' ? -1 : 1; }
+  renderList();
+}
+function renderList() {
+  const bounds = rangeBounds();
+  const rows = visibleCourts().map((c) => ({
+    c, scans: countFor(c, bounds), status: c.locationStatus,
+  }));
+  const k = state.sortKey, dir = state.sortDir;
+  const ord = { verified: 0, approx: 1, missing: 2 };
+  rows.sort((a, b) => {
+    let va, vb;
+    if (k === 'scans') { va = a.scans; vb = b.scans; }
+    else if (k === 'status') { va = ord[a.status]; vb = ord[b.status]; }
+    else { va = (a.c[k] || '').toLowerCase(); vb = (b.c[k] || '').toLowerCase(); }
+    return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+  });
+  for (const col of ['location', 'city', 'state', 'scans', 'status']) {
+    document.getElementById('ar-' + col).textContent = k === col ? (dir === 1 ? '▲' : '▼') : '';
+  }
+  const badge = { verified: '<span class="loc-badge verified">✓ Verified</span>',
+                  approx: '<span class="loc-badge approx">≈ Approximate</span>',
+                  missing: '<span class="loc-badge missing">No location</span>' };
+  const totalScans = rows.reduce((s, r) => s + r.scans, 0);
+  document.getElementById('list-body').innerHTML = rows.map((r) => `
+    <tr onclick="focusCourt(${r.c.id})">
+      <td><b>${r.c.location}</b></td>
+      <td>${r.c.city || '—'}</td>
+      <td>${r.c.state || '—'}</td>
+      <td class="num">${r.scans.toLocaleString()}</td>
+      <td>${badge[r.status]}</td>
+    </tr>`).join('') + `
+    <tr class="total-row">
+      <td>Total</td>
+      <td>${rows.length} locations</td>
+      <td>${state.stateFilter || 'All states'}</td>
+      <td class="num">${totalScans.toLocaleString()}</td>
+      <td></td>
+    </tr>`;
+  document.getElementById('mode-line-3').textContent =
+    `${rows.length} locations · ${RANGE_LABELS[state.range]} · ${state.includeBots ? 'all scans (matches Uniqode)' : 'human scans only'}${state.stateFilter ? ' · ' + state.stateFilter : ''}`;
 }
 function setRange(r) {
   state.range = r;
@@ -857,6 +1148,7 @@ function openAbout() { document.getElementById('about-bg').style.display = 'flex
 /* ═══════════════════════════════ Boot ══════════════════════════════════ */
 document.getElementById('header-date').textContent =
   new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+if (['#list', '#analytics'].includes(location.hash)) setView(location.hash.slice(1));
 loadData(false);
 </script>
 </body>

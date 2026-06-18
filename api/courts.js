@@ -17,15 +17,21 @@ import {
 } from './_lib.js';
 
 const RECONCILE_TOLERANCE = 2; // R11: delta ≤ 2 = matches Uniqode
+// Per-day webhook archive begins here. Codes created before this date have
+// official totals that legitimately include scans we have no event rows for —
+// that surplus is expected history, not drift.
+const ARCHIVE_START = '2025-06-04';
 
 export default async function handler(req, res) {
   try {
-    const [codes, totals] = await Promise.all([
+    const [codes, totals, suggestions] = await Promise.all([
       fetchAllQRCodes(),
       supabaseSelect('scan_totals?select=qr_id,human_scans,bot_scans'),
+      supabaseSelect('qr_location_suggestions?select=qr_id,lat,lon,source'),
     ]);
 
     const totalsById = new Map(totals.map((t) => [String(t.qr_id), t]));
+    const suggestionById = new Map(suggestions.map((s) => [String(s.qr_id), s]));
 
     const courts = codes
       .filter((c) => c.name.startsWith('QR') && c.state === 'A')
@@ -36,6 +42,14 @@ export default async function handler(req, res) {
         const computedAll = t.human_scans + t.bot_scans;
         const official = c.scans ?? 0;
         const delta = official - computedAll;
+        const preArchive = (c.created || '').slice(0, 10) < ARCHIVE_START;
+        // verified = exact coords from Uniqode metadata (human-confirmed);
+        // approx   = geocoded from the code's name, awaiting confirmation;
+        // missing  = no usable position at all.
+        const suggestion = suggestionById.get(String(c.id));
+        const locationStatus = loc.hasLocation ? 'verified' : suggestion ? 'approx' : 'missing';
+        const lat = loc.hasLocation ? loc.lat : suggestion ? suggestion.lat : null;
+        const lon = loc.hasLocation ? loc.lon : suggestion ? suggestion.lon : null;
         return {
           id: c.id,
           name: c.name,
@@ -44,14 +58,16 @@ export default async function handler(req, res) {
           location: named.location,
           url: c.url,
           created: c.created,
-          lat: loc.lat,
-          lon: loc.lon,
+          lat,
+          lon,
           address: loc.address,
           hasLocation: loc.hasLocation,
+          locationStatus,
           officialScans: official,
           humanScans: t.human_scans,
           botScans: t.bot_scans,
-          reconciled: Math.abs(delta) <= RECONCILE_TOLERANCE,
+          reconciled: Math.abs(delta) <= RECONCILE_TOLERANCE || (preArchive && delta > 0),
+          preArchive,
           delta,
         };
       })
@@ -59,6 +75,7 @@ export default async function handler(req, res) {
 
     const needsLocation = courts.filter((c) => !c.hasLocation).map((c) => c.id);
     const reconciledCount = courts.filter((c) => c.reconciled).length;
+    const approxCount = courts.filter((c) => c.locationStatus === 'approx').length;
 
     setCache(res);
     res.status(200).json({
@@ -67,6 +84,7 @@ export default async function handler(req, res) {
       summary: {
         totalCourts: courts.length,
         plotted: courts.length - needsLocation.length,
+        approx: approxCount,
         needsLocation: needsLocation.length,
         humanScans: courts.reduce((s, c) => s + c.humanScans, 0),
         botScans: courts.reduce((s, c) => s + c.botScans, 0),
