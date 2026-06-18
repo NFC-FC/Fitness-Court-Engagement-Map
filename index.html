@@ -212,6 +212,16 @@ header {
 .confirm-form .hint { font-size: 0.66rem; color: var(--text-3); }
 .popup-confirm input { font-size: 0.72rem; border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; width: 100%; margin-top: 4px; }
 .popup-confirm button { font-size: 0.7rem; font-weight: 700; background: var(--blue); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; margin-top: 6px; cursor: pointer; }
+.unmapped-btn { margin-top: 7px; font: inherit; font-size: 0.68rem; font-weight: 700; color: #92400e; background: #fef3c7; border: 1px solid #fcd97a; border-radius: 7px; padding: 5px 10px; cursor: pointer; }
+.unmapped-btn:hover { background: #fde9a8; }
+.um-row { padding: 12px 0; border-bottom: 1px solid #f1f4fa; }
+.um-row:last-child { border-bottom: none; }
+.um-name { font-weight: 700; font-size: 0.84rem; }
+.um-sub { font-size: 0.72rem; color: var(--text-3); margin: 2px 0 8px; }
+.um-row .row2 { display: flex; gap: 6px; }
+.um-row input { font: inherit; font-size: 0.78rem; border: 1px solid var(--border); border-radius: 7px; padding: 6px 9px; width: 100%; }
+.um-row button { font: inherit; font-size: 0.74rem; font-weight: 700; background: var(--blue); color: #fff; border: none; border-radius: 7px; padding: 7px 14px; margin-top: 6px; cursor: pointer; }
+.um-row button:disabled { opacity: 0.5; }
 .popup-toggle { font-size: 0.68rem; font-weight: 700; color: var(--blue); background: #eef3fd; border: none; border-radius: 6px; padding: 4px 9px; margin-top: 8px; cursor: pointer; }
 .popup-toggle.subtle { background: none; color: var(--text-3); font-weight: 600; padding: 2px 0; }
 .popup-toggle.subtle:hover { color: var(--blue); }
@@ -288,7 +298,7 @@ header {
       <div class="kpi-icon" style="background:#e8effc;color:var(--blue)">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14h1v1h-1zM14 20h1v1h-1zM18 18h3v3h-3z"/></svg>
       </div>
-      <div><div class="kpi-num" style="color:var(--blue)" id="kpi-total">—</div><div class="kpi-label">Fitness Courts</div><div class="kpi-sub">Total Unique QR Codes Installed</div></div>
+      <div><div class="kpi-num" style="color:var(--blue)" id="kpi-total">—</div><div class="kpi-label">Fitness Courts</div><div class="kpi-sub">Total Unique QR Codes Printed</div></div>
     </div>
     <div class="card kpi">
       <div class="kpi-icon" style="background:#e7f6ec;color:var(--green)">
@@ -306,7 +316,12 @@ header {
       <div class="kpi-icon" style="background:#e8effc;color:var(--blue)">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </div>
-      <div><div class="kpi-num" style="color:var(--blue)" id="kpi-visible">—</div><div class="kpi-label">Visible</div><div class="kpi-sub">Courts On Map</div></div>
+      <div style="flex:1">
+        <div class="kpi-num" style="color:var(--blue)" id="kpi-visible">—</div>
+        <div class="kpi-label">Visible</div>
+        <div class="kpi-sub">Courts On Map</div>
+        <button class="unmapped-btn" id="unmapped-btn" onclick="openUnmapped()" style="display:none">⚠ <span id="unmapped-count">0</span> unmapped — verify</button>
+      </div>
     </div>
   </div>
 
@@ -495,6 +510,16 @@ header {
     </ul>
     <h3>Trust check</h3>
     <p>On every sync, each code's computed total is reconciled against Uniqode's official all-time count. The status dot at the bottom of the map turns amber if any code drifts by more than 2 scans.</p>
+  </div>
+</div>
+
+<!-- Unmapped codes modal -->
+<div class="modal-bg" id="unmapped-bg" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('unmapped-bg').style.display='none'">✕</button>
+    <h2>Unmapped codes — verify location</h2>
+    <p>These codes have no map position yet (their names couldn't be auto-placed). Add a lat/lon or an address to put each on the map. Saving writes the location into that code's Uniqode metadata.</p>
+    <div id="unmapped-list" style="margin-top:14px"></div>
   </div>
 </div>
 
@@ -690,7 +715,7 @@ function renderKPIs() {
   document.getElementById('kpi-total').textContent = total;
   document.getElementById('kpi-active').textContent = active;
   document.getElementById('kpi-active-sub').textContent =
-    total ? `${Math.round((active / total) * 100)}% Active` : '—';
+    total ? `${Math.round((active / total) * 100)}% Active in Date Range` : '—';
   document.getElementById('kpi-scans').textContent = scans.toLocaleString();
   const unplotted = courts.filter((c) => !plottable(c));
   const unplottedScans = unplotted.reduce((s, c) => s + countFor(c, bounds), 0);
@@ -699,6 +724,16 @@ function renderKPIs() {
     (state.stateFilter ? ` · ${state.stateFilter}` : '') +
     (unplottedScans ? ` — incl. ${unplottedScans.toLocaleString()} from ${unplotted.length} unmapped codes` : '');
   document.getElementById('kpi-visible').textContent = courts.filter(plottable).length;
+  // Unmapped = no position at all (geocoding couldn't place the name). These
+  // are the ones to clean up via the "verify" button on the Visible card.
+  const unmapped = courts.filter((c) => c.locationStatus === 'missing');
+  const btn = document.getElementById('unmapped-btn');
+  if (unmapped.length) {
+    document.getElementById('unmapped-count').textContent = unmapped.length;
+    btn.style.display = '';
+  } else {
+    btn.style.display = 'none';
+  }
 }
 
 function popupHTML(court, count) {
@@ -917,9 +952,10 @@ function adminKey(forceAsk) {
   }
   return k;
 }
-async function postConfirm(id, payload, btn) {
+async function postConfirm(id, payload, btn, afterSave) {
   const key = adminKey(false);
   if (!key) return;
+  const label = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
     const resp = await fetch('/api/confirm-location', {
@@ -930,17 +966,53 @@ async function postConfirm(id, payload, btn) {
     const body = await resp.json();
     if (resp.status === 401) {
       localStorage.removeItem('nfc-admin-key');
-      if (adminKey(true)) return postConfirm(id, payload, btn);
+      if (adminKey(true)) return postConfirm(id, payload, btn, afterSave);
       return;
     }
     if (!resp.ok) throw new Error(body.error || resp.status);
     await loadData(true);
-    focusCourt(id);
+    if (afterSave) afterSave(); else focusCourt(id);
   } catch (err) {
     alert('Could not save location: ' + err.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Save confirmed location'; }
+    if (btn) { btn.disabled = false; btn.textContent = label || 'Save confirmed location'; }
   }
+}
+
+/* ── Unmapped-codes cleanup modal (Visible KPI card button) ── */
+function openUnmapped() {
+  const unmapped = state.courts
+    .filter((c) => c.locationStatus === 'missing')
+    .sort((a, b) => countFor(b, null) - countFor(a, null));
+  const list = document.getElementById('unmapped-list');
+  if (!unmapped.length) {
+    list.innerHTML = '<p style="color:var(--green);font-weight:600">🎉 Everything is mapped — nothing left to verify.</p>';
+  } else {
+    list.innerHTML = unmapped.map((c) => `
+      <div class="um-row" id="um-row-${c.id}">
+        <div class="um-name">${c.name}</div>
+        <div class="um-sub">${countFor(c, null).toLocaleString()} scans all time · ${c.city || ''}${c.state ? ', ' + c.state : ''}</div>
+        <div class="row2">
+          <input id="um-lat-${c.id}" placeholder="lat (e.g. 37.80614)">
+          <input id="um-lon-${c.id}" placeholder="lon (e.g. -122.43512)">
+        </div>
+        <input id="um-addr-${c.id}" placeholder="…or paste a street address" style="margin-top:6px">
+        <button id="um-btn-${c.id}" onclick="submitUnmapped(${c.id})">Save location</button>
+      </div>`).join('');
+  }
+  document.getElementById('unmapped-bg').style.display = 'flex';
+}
+function submitUnmapped(id) {
+  const lat = document.getElementById('um-lat-' + id).value.trim();
+  const lon = document.getElementById('um-lon-' + id).value.trim();
+  const address = document.getElementById('um-addr-' + id).value.trim();
+  if (!(lat && lon) && !address) { alert('Enter lat + lon, or an address.'); return; }
+  postConfirm(
+    id,
+    lat && lon ? { lat: +lat, lon: +lon, address: address || undefined } : { address },
+    document.getElementById('um-btn-' + id),
+    openUnmapped // refresh the modal in place; saved code drops off the list
+  );
 }
 function submitConfirm(id) {
   const lat = document.getElementById('cf-lat-' + id).value.trim();
